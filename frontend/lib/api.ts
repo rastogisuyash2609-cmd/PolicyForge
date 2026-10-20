@@ -66,6 +66,15 @@ export interface CompileResponse {
   summary: string;
 }
 
+export interface Finding {
+  type: string;
+  severity: string;
+  rule_ids: string[];
+  event_indices: number[];
+  trace: string;
+  details?: Record<string, unknown> | null;
+}
+
 export interface SimulateResponse {
   outcomes: Array<{
     event_index: number;
@@ -74,7 +83,7 @@ export interface SimulateResponse {
     outcome: string;
     action_applied: boolean;
     resolution_type: string;
-    findings: any[];
+    findings: Finding[];
   }>;
   final_state: Record<string, any>;
   trace: {
@@ -85,7 +94,18 @@ export interface SimulateResponse {
       is_decision_event: boolean;
       rules_evaluated: string[];
       rules_fired: string[];
-      evaluations: any[];
+      evaluations: Array<{
+        rule_id: string;
+        rule_name: string;
+        effect: string;
+        priority: number;
+        fired: boolean;
+        reason: string;
+        leaf_evaluations: Array<{ description: string; passed: boolean }>;
+      }>;
+      active_rules: string[];
+      suppressed_rules: string[];
+      findings: Finding[];
       resolution_type: string;
       outcome: string;
       explanation: string;
@@ -93,7 +113,7 @@ export interface SimulateResponse {
       state_after: Record<string, unknown>;
     }>;
   };
-  findings: any[];
+  findings: Finding[];
 }
 
 export interface SuiteResponse {
@@ -113,8 +133,16 @@ export interface SuiteResponse {
       details?: Record<string, any>;
     };
     shrink?: {
-      original_journey: Array<{ event_type: string; day: number; payload?: any }>;
-      minimal_journey: Array<{ event_type: string; day: number; payload?: any }>;
+      original_journey: Array<{
+        event_type: string;
+        day: number;
+        payload?: any;
+      }>;
+      minimal_journey: Array<{
+        event_type: string;
+        day: number;
+        payload?: any;
+      }>;
       original_length: number;
       minimal_length: number;
       engine_runs: number;
@@ -201,13 +229,32 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
       ...options,
     });
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(errData.detail || `Request failed with status ${res.status}`);
+      const errData = await res
+        .json()
+        .catch(() => ({ detail: res.statusText }));
+      const detail: unknown = errData.detail;
+      const message =
+        typeof detail === "string"
+          ? detail
+          : Array.isArray(detail)
+            ? detail
+                .map(
+                  (entry: { loc?: unknown[]; msg?: string }) =>
+                    `${entry.loc?.join(".") ?? "Request"}: ${entry.msg ?? "Invalid value"}`,
+                )
+                .join("; ")
+            : `Request failed with status ${res.status}`;
+      throw new Error(message);
     }
     return (await res.json()) as T;
   } catch (err: any) {
-    if (err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError")) {
-      throw new Error(`Unable to connect to PolicyForge backend at ${API_BASE}. Ensure the FastAPI server is running.`);
+    if (
+      err.message?.includes("Failed to fetch") ||
+      err.message?.includes("NetworkError")
+    ) {
+      throw new Error(
+        `Unable to connect to PolicyForge backend at ${API_BASE}. Ensure the FastAPI server is running.`,
+      );
     }
     throw err;
   }
@@ -228,23 +275,31 @@ export const api = {
       body: JSON.stringify(params),
     }),
 
-  simulate: (params: {
-    rules: any[];
-    journey: Array<{ event_type: string; day: number; payload?: any }>;
-    default_decision_outcome?: string;
-  }) =>
+  simulate: (
+    params: {
+      rules: any[];
+      journey: Array<{ event_type: string; day: number; payload?: any }>;
+      default_decision_outcome?: string;
+    },
+    signal?: AbortSignal,
+  ) =>
     request<SimulateResponse>("/api/simulate", {
+      signal,
       method: "POST",
       body: JSON.stringify(params),
     }),
 
-  runSuite: (params: {
-    rules: any[];
-    suite_type?: "boundary" | "pairwise" | "custom";
-    custom_scenarios?: any[];
-    limit?: number;
-  }) =>
+  runSuite: (
+    params: {
+      rules: any[];
+      suite_type?: "boundary" | "pairwise" | "custom";
+      custom_scenarios?: any[];
+      limit?: number;
+    },
+    signal?: AbortSignal,
+  ) =>
     request<SuiteResponse>("/api/run-suite", {
+      signal,
       method: "POST",
       body: JSON.stringify(params),
     }),

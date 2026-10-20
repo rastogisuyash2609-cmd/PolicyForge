@@ -66,7 +66,7 @@ function Severity({ value }: { value: string }) {
 }
 
 export function IssuesScreen() {
-  const { defaultData, issues } = useWorkspace();
+  const { active, issues } = useWorkspace();
   const {
     rulesMap,
     suite,
@@ -95,12 +95,21 @@ export function IssuesScreen() {
     relatedRules,
   } = issues;
 
+  if (!active)
+    return (
+      <Card>
+        <EmptyState
+          title="No active rules"
+          description="Open Analyze Policy to select or create and activate valid rules."
+        />
+      </Card>
+    );
   return (
     <div className="space-y-6">
       <SectionHeader
         eyebrow="Deterministic verification"
         title="Policy issues"
-        description="Find the moments where policy rules disagree, leave a gap, or violate a business constraint."
+        description={`Analyze ${active?.name ?? "the active policy"}. Findings come from the selected engine-domain journeys, not exhaustive policy coverage.`}
         action={
           <Button variant="secondary" onClick={runSuite} loading={loading}>
             {!loading && <RefreshCw aria-hidden="true" className="h-4 w-4" />}
@@ -123,7 +132,7 @@ export function IssuesScreen() {
           },
           {
             label: "Policy rules",
-            value: defaultData?.rules_v1.length,
+            value: active?.rules.length,
             icon: Layers,
           },
         ].map(({ label, value, icon: Icon }) => (
@@ -237,8 +246,8 @@ export function IssuesScreen() {
               ))}
             </ul>
             <p className="px-1 pt-2 text-xs leading-5 text-muted">
-              Findings are verified by Python simulation. This demonstration
-              uses predefined customer journeys.
+              Findings are verified by Python simulation using the active policy
+              and the sample journeys selected in Analyze Policy.
             </p>
           </aside>
 

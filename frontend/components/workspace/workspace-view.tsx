@@ -2,6 +2,7 @@
 
 import { RefreshCw } from "lucide-react";
 import { Alert, Button, Card, Skeleton } from "@/components/ui/primitives";
+import { AnalyzeScreen } from "@/components/screens/AnalyzeScreen";
 import { IssuesScreen } from "@/components/screens/IssuesScreen";
 import { PoliciesScreen } from "@/components/screens/PoliciesScreen";
 import { WhatIfScreen } from "@/components/screens/WhatIfScreen";
@@ -10,7 +11,7 @@ import { useWorkspace } from "./workspace-provider";
 export function WorkspaceView({
   view,
 }: {
-  view: "issues" | "policies" | "what-if";
+  view: "issues" | "policies" | "what-if" | "analyze";
 }) {
   const { defaultData, loading, error, retry } = useWorkspace();
   if (view === "what-if") return <WhatIfScreen defaultData={defaultData} />;
@@ -40,9 +41,6 @@ export function WorkspaceView({
         </Button>
       </Card>
     );
-  return view === "issues" ? (
-    <IssuesScreen />
-  ) : (
-    <PoliciesScreen defaultData={defaultData} />
-  );
+  if (view === "analyze") return <AnalyzeScreen />;
+  return view === "issues" ? <IssuesScreen /> : <PoliciesScreen />;
 }

@@ -3,21 +3,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   api,
-  type DefaultData,
   type JourneyEvent,
   type PolicyRule,
   type SimulateResponse,
   type SuiteResponse,
 } from "@/lib/api";
+import type { ActivePolicy, Scenario } from "./policy-domain";
+import { LatestRequest } from "./latest-request";
 import { resolutionBadge } from "@/lib/translate";
 
 // Owned by the persistent workspace provider, not by a route page.
 export function useIssuesAnalysis(
-  defaultData: DefaultData | null,
+  policy: ActivePolicy | null,
+  scenarios: Scenario[],
   enabled: boolean,
 ) {
-  const [suite, setSuite] = useState<SuiteResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const scenarioKey = JSON.stringify(scenarios);
+  const [suiteRecord, setSuite] = useState<{
+    key: string;
+    result: SuiteResponse;
+  } | null>(null);
+  const suite = suiteRecord?.key === scenarioKey ? suiteRecord.result : null;
+  const [loading, setLoading] = useState(Boolean(policy));
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState(0);
   const [editJourney, setEditJourney] = useState<JourneyEvent[]>([]);
@@ -29,41 +36,61 @@ export function useIssuesAnalysis(
   const simulationVersion = useRef(0);
   const rulesMap = useMemo<Record<string, PolicyRule>>(
     () =>
-      Object.fromEntries(
-        (defaultData?.rules_v1 ?? []).map((rule) => [rule.id, rule]),
-      ),
-    [defaultData],
+      Object.fromEntries((policy?.rules ?? []).map((rule) => [rule.id, rule])),
+    [policy],
   );
 
+  const suiteChannel = useRef(new LatestRequest());
+  const started = useRef(false);
   const runSuite = useCallback(async () => {
-    if (!defaultData) return;
+    if (!policy || !scenarios.length) {
+      setLoading(false);
+      setError(
+        "Choose at least one journey in Analyze Policy before running the suite.",
+      );
+      return;
+    }
+    const token = suiteChannel.current.begin();
     setLoading(true);
     setError(null);
     try {
-      const result = await api.runSuite({
-        rules: defaultData.rules_v1,
-        suite_type: "custom",
-        custom_scenarios: defaultData.sample_journeys,
-      });
-      setSuite(result);
+      const result = await api.runSuite(
+        {
+          rules: policy.rules,
+          suite_type: "custom",
+          custom_scenarios: scenarios,
+          limit: scenarios.length,
+        },
+        token.signal,
+      );
+      if (!suiteChannel.current.current(token.id)) return;
+      setSuite({ key: scenarioKey, result });
       setSelected(0);
     } catch (error: unknown) {
+      if (!suiteChannel.current.current(token.id)) return;
       setError(
         error instanceof Error
           ? error.message
           : "The scenario suite could not be completed.",
       );
     } finally {
-      setLoading(false);
+      if (suiteChannel.current.current(token.id)) setLoading(false);
     }
-  }, [defaultData]);
-  const started = useRef(false);
+  }, [policy, scenarios, scenarioKey]);
   useEffect(() => {
-    if (enabled && defaultData && !started.current) {
+    suiteChannel.current.cancel();
+    started.current = false;
+    setSuite(null);
+    setError(null);
+    setSelected(0);
+    setLoading(Boolean(policy));
+  }, [scenarioKey, policy]);
+  useEffect(() => {
+    if (enabled && policy && !started.current) {
       started.current = true;
       void runSuite();
     }
-  }, [enabled, defaultData, runSuite]);
+  }, [enabled, policy, runSuite]);
 
   const findings = suite?.findings ?? [];
   const item = findings[selected];
@@ -86,7 +113,10 @@ export function useIssuesAnalysis(
   useEffect(() => {
     const version = simulationVersion;
     const timer = debounceRef;
+    const suiteRequests = suiteChannel.current;
     return () => {
+      started.current = false;
+      suiteRequests.cancel();
       version.current++;
       if (timer.current) clearTimeout(timer.current);
     };
@@ -94,7 +124,7 @@ export function useIssuesAnalysis(
 
   const simulate = useCallback(
     (journey: JourneyEvent[]) => {
-      if (!defaultData || journey.length === 0) return;
+      if (!policy || journey.length === 0) return;
       const version = ++simulationVersion.current;
       if (debounceRef.current) clearTimeout(debounceRef.current);
       setSimLoading(true);
@@ -104,7 +134,7 @@ export function useIssuesAnalysis(
       debounceRef.current = setTimeout(async () => {
         try {
           const result = await api.simulate({
-            rules: defaultData.rules_v1,
+            rules: policy.rules,
             journey,
           });
           if (version === simulationVersion.current) setSimResult(result);
@@ -120,7 +150,7 @@ export function useIssuesAnalysis(
         }
       }, 300);
     },
-    [defaultData],
+    [policy],
   );
 
   function updateDay(index: number, day: number) {

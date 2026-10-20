@@ -7,8 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:integration": "tsc -p tsconfig.tests.json && node --test .test-output/tests/offline-api.test.js",
     "typecheck": "tsc --noEmit --incremental false",
-    "test": "tsc -p tsconfig.tests.json && node --test .test-output/tests/design-system.test.js"
+    "test": "tsc -p tsconfig.tests.json && node --test .test-output/tests/design-system.test.js .test-output/tests/policy-workspace.test.js"
   },
   "dependencies": {
     "@next/swc-win32-x64-msvc": "^14.2.15",

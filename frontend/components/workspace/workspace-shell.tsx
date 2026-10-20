@@ -9,6 +9,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ShieldAlert,
+  FileSearch,
 } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { NavigationDrawer } from "@/components/navigation-drawer";
@@ -18,6 +19,7 @@ import { useWorkspace } from "./workspace-provider";
 import { cn } from "@/lib/utils";
 
 const navigation = [
+  { href: "/workspace/analyze", label: "Analyze Policy", icon: FileSearch },
   { href: "/workspace/issues", label: "Issues", icon: ShieldAlert },
   { href: "/workspace/policies", label: "Policies", icon: FileText },
 ];
@@ -52,7 +54,7 @@ function WorkspaceLinks({ collapsed = false }: { collapsed?: boolean }) {
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { loading, error } = useWorkspace();
+  const { loading, error, active } = useWorkspace();
   const title =
     navigation.find((item) => item.href === pathname)?.label ??
     "What-if · planned";
@@ -80,11 +82,15 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         <div className="mt-auto space-y-4 pt-8">
           {!collapsed && (
             <div className="rounded-lg border border-border bg-surface p-3">
-              <p className="text-xs font-medium">NovaCart demo</p>
+              <p className="break-words text-xs font-medium">
+                {active?.name ?? "No active policy"}
+              </p>
               <p className="mt-1 text-xs leading-5 text-muted">
                 Refunds &amp; replacements.
                 <br />
-                Existing v1 policy fixtures.
+                {active?.origin === "manual"
+                  ? "Manually created rules."
+                  : "Known demo rules."}
               </p>
             </div>
           )}
@@ -123,7 +129,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
                 </div>
                 <WorkspaceLinks />
                 <p className="mt-8 px-3 text-xs leading-5 text-muted">
-                  NovaCart demo · v1
+                  {active?.name ?? "No active policy"}
                   <br />
                   Refunds &amp; replacements
                 </p>
@@ -144,7 +150,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               /
             </span>
             <span className="hidden text-xs text-muted sm:inline">
-              NovaCart
+              {active?.origin === "manual" ? "Manual rules" : "Demo Policy"}
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-3">
@@ -175,11 +181,15 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               <FileText aria-hidden="true" className="h-4 w-4" />
               <span>Refunds &amp; replacements</span>
             </div>
-            <Badge>Demo workspace · v1</Badge>
+            <Badge>
+              {active
+                ? `${active.origin === "manual" ? "Manual" : "Demo"} · rev ${active.revision}`
+                : "No active rules"}
+            </Badge>
           </div>
           {children}
           <footer className="mt-10 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-5 text-xs text-muted">
-            <span>LLM-assisted extraction. Deterministic findings.</span>
+            <span>Offline structured rules. Deterministic findings.</span>
             <Link
               href="/"
               className="inline-flex min-h-11 items-center gap-1 rounded-md hover:text-text"
