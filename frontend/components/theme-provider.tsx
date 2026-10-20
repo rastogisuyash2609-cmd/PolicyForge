@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { MotionConfig } from "framer-motion";
+import { usePathname } from "next/navigation";
 
 type Theme = "light" | "dark";
 const ThemeContext = createContext<{
@@ -14,11 +15,27 @@ const ThemeContext = createContext<{
   toggleTheme: () => void;
 } | null>(null);
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const [theme, setTheme] = useState<Theme>("light");
   useEffect(() => {
-    setTheme(
-      document.documentElement.classList.contains("dark") ? "dark" : "light",
-    );
+    // A cached App Router transition may restore the initial HTML classes.
+    // Reconcile from the saved preference instead of treating those as truth.
+    let next: Theme = document.documentElement.classList.contains("dark")
+      ? "dark"
+      : "light";
+    try {
+      const saved = localStorage.getItem("pf-theme");
+      next =
+        saved === "dark" ||
+        (saved !== "light" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches)
+          ? "dark"
+          : "light";
+    } catch {
+      /* Keep the current theme when storage is unavailable. */
+    }
+    document.documentElement.classList.toggle("dark", next === "dark");
+    setTheme(next);
     function syncTheme(event: StorageEvent) {
       if (event.key !== "pf-theme") return;
       const next =
@@ -32,7 +49,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener("storage", syncTheme);
     return () => window.removeEventListener("storage", syncTheme);
-  }, []);
+  }, [pathname]);
   function toggleTheme() {
     const next = document.documentElement.classList.contains("dark")
       ? "light"

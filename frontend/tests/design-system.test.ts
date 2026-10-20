@@ -164,6 +164,37 @@ function luminance(rgb: number[]): number {
   });
   return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
 }
+test("landing hero text and CTA colors meet AA normal-text contrast", () => {
+  const page = readFileSync("app/page.tsx", "utf8");
+  const hero = page.slice(
+    page.indexOf('aria-labelledby="hero-heading"'),
+    page.indexOf('id="product"'),
+  );
+  const rgb = (hex: string) =>
+    [0, 2, 4].map((index) => parseInt(hex.slice(index, index + 2), 16));
+  const contrast = (a: string, b: string) => {
+    const x = luminance(rgb(a)),
+      y = luminance(rgb(b));
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  };
+  const background = hero.match(/bg-\[#([0-9A-F]{6})\]/)?.[1];
+  assert.ok(background);
+  const colors = new Set(
+    Array.from(hero.matchAll(/text-\[#([0-9A-F]{6})\]/g), (match) => match[1]),
+  );
+  assert.ok(colors.size >= 3, "Check the actual hero colors");
+  for (const color of Array.from(colors))
+    assert.ok(contrast(color, background) >= 4.5, `${color}/${background}`);
+  const cta = hero.match(
+    /<Link\s+href="\/workspace"\s+className="([^"]+)"/,
+  )?.[1];
+  assert.ok(cta, "Check the actual primary CTA");
+  for (const match of Array.from(
+    cta.matchAll(/(?:hover:)?bg-\[#([0-9A-F]{6})\]/g),
+  )) {
+    assert.ok(contrast("FFFFFF", match[1]) >= 4.5, `CTA white/${match[1]}`);
+  }
+});
 for (const selector of [":root", "\\.dark"]) {
   test(`${selector}: text, action and severity token pairs meet AA normal-text contrast`, () => {
     const theme = tokens(selector);

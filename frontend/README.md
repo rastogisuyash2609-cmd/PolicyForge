@@ -15,9 +15,22 @@ $env:PYTHONPATH = Join-Path (Get-Location) 'backend'
 python -m uvicorn policyforge.api:app --host 127.0.0.1 --port 8000
 ```
 
-The mounted screens are Issues, Policies, and What-if. Issues uses real suite
-and simulation responses. Policies displays the existing NovaCart v1 fixtures.
-What-if is explicitly a placeholder. Other screen components remain unmounted.
+The public landing page is `/`. `/workspace` redirects to `/workspace/issues`;
+`/workspace/policies` displays the existing NovaCart v1 rules. Issues uses real
+suite and simulation responses. `/workspace/what-if` is an explicitly unfinished
+development route, hidden from primary navigation. Other screens remain unmounted.
+
+`app/workspace/layout.tsx` owns a persistent WorkspaceProvider and WorkspaceShell.
+The provider loads fixtures once and owns `useIssuesAnalysis`, preserving the
+suite, selected finding, edited journey, simulation result, and selected timeline
+step across normal workspace navigation. The first suite starts on entering
+Issues. Hard reloads and leaving/re-entering the workspace reset this transient
+analysis; theme preference remains in localStorage. Native rule disclosures reset
+when their route unmounts. No database or analysis persistence was added.
+
+The shared native-dialog navigation traps keyboard focus, closes with Escape,
+returns focus to its trigger, and closes when resizing to desktop. Desktop
+sidebar links expose `aria-current`; the sidebar can be collapsed.
 
 ## Frontend checks
 
@@ -51,13 +64,14 @@ no additional testing package is required. Generated test output is ignored.
 
 ## Scope and remaining work
 
-Phase 2 does not add routes, a landing page, policy submission, upload, history,
-authentication, or comparison integration. API contracts and backend logic remain
-unchanged. Existing unmounted screens retain their workflows and need their own
-design/accessibility pass before mounting.
+Phase 3 adds the landing page and URL-based workspace, with a server-rendered
+marketing page, labelled source-fixture preview, route metadata, and no new
+dependencies. Policy submission, upload, history, authentication, and comparison
+integration remain deferred. API contracts and backend logic remain unchanged.
+Existing unmounted screens need their own design/accessibility pass before mounting.
 
 Backend validation, invariant-signature grouping, diff attribution/coverage, and
 formal response models remain backend-owner follow-ups from the audit. The UI
 does not claim exhaustive policy coverage or globally shortest counterexamples.
 
-See `PHASE2.md` for implementation and verification evidence.
+See `PHASE2.md` and `PHASE3.md` for implementation and verification evidence.
