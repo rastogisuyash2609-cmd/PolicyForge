@@ -11,6 +11,6 @@
     "rootDir": ".",
     "plugins": []
   },
-  "include": ["tests/**/*.test.ts", "lib/translate.ts", "lib/utils.ts"],
+  "include": ["tests/**/*.ts", "lib/translate.ts", "lib/utils.ts"],
   "exclude": ["node_modules", ".next", ".test-output"]
 }

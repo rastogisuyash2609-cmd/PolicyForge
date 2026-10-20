@@ -228,7 +228,9 @@ export function Disclosure({
   return (
     <details className="group min-w-0 rounded-xl border border-border bg-surface shadow-card">
       <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-xl px-5 py-3 text-sm font-medium text-text transition-colors duration-fast hover:bg-hover">
-        {title}
+        <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+          {title}
+        </span>
         <ChevronDown
           aria-hidden="true"
           className="h-4 w-4 shrink-0 text-muted transition-transform duration-base group-open:rotate-180"

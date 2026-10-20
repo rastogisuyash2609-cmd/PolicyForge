@@ -519,11 +519,11 @@ export function Dashboard({ defaultData, onNavigate }: DashboardProps) {
                             REQUEST EVENT
                           </span>
                           <span className="font-mono text-[11px] text-muted px-1.5 py-0.5 rounded bg-bg border border-border">
-                            {selectedFinding.details?.event_type || "EVENT"}
+                            {String(selectedFinding.details?.event_type ?? "EVENT")}
                           </span>
                         </div>
                         <h4 className="text-sm font-semibold text-text">
-                          {translateEventType(selectedFinding.details?.event_type)}
+                          {translateEventType(typeof selectedFinding.details?.event_type === "string" ? selectedFinding.details.event_type : undefined)}
                         </h4>
                         <p className="text-xs text-muted mt-2">
                           Customer submitted this event before order reached delivered state, but no clause authorizes or denies this transition.

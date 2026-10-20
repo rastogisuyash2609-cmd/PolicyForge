@@ -1,328 +1,131 @@
-/**
- * API client for the PolicyForge FastAPI backend (default: http://localhost:8000).
- */
+import type {
+  CompileRequest,
+  CompileResponse,
+  DiffRequest,
+  ShrinkRequest,
+  SimulateRequest,
+  SuiteRequest,
+} from "./api-types";
+import { createTransport, ApiError, type HttpConfig } from "./http-client";
+import {
+  defaultDataContract,
+  diffContract,
+  healthContract,
+  shrinkContract,
+  simulationContract,
+  suiteContract,
+} from "./api-contracts";
+import { validateJourney, validateRules } from "./policy-domain";
+export * from "./api-types";
+export { ApiError, API_BASE_URL } from "./http-client";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-export interface JourneyEvent {
-  event_type: string;
-  day: number;
-  payload?: Record<string, unknown>;
+function requireRules(rules: SimulateRequest["rules"]) {
+  const result = validateRules(JSON.stringify(rules));
+  if (!result.value) throw new ApiError(result.errors.join(" "), "validation");
 }
-
-export interface PolicyRule {
-  id: string;
-  name: string;
-  decision: "REFUND" | "REPLACEMENT";
-  trigger: string;
-  when: Record<string, unknown>;
-  effect: "ALLOW" | "DENY";
-  priority: number;
-  overrides: string[];
-  source: { doc_name: string; verbatim_sentence: string };
-  state_updates?: Record<string, unknown> | null;
+function requireJourney(journey: SimulateRequest["journey"]) {
+  const result = validateJourney(JSON.stringify(journey));
+  if (!result.value) throw new ApiError(result.errors.join(" "), "validation");
 }
-
-export interface DefaultData {
-  documents: Record<string, string>;
-  rules_v1: PolicyRule[];
-  rules_v2: PolicyRule[];
-  sample_journeys: Array<{
-    id: string;
-    name: string;
-    description: string;
-    journey: Array<{
-      event_type: string;
-      day: number;
-      payload?: Record<string, any>;
-    }>;
-  }>;
-}
-
-export interface CompileResponse {
-  total_clauses: number;
-  mapped_clauses: number;
-  unmapped_clauses: Array<{
-    id: string;
-    text: string;
-    doc_name: string;
-    line_number: number;
-  }>;
-  compiled_rules: any[];
-  rule_confidence: Record<
-    string,
-    {
-      rule_id: string;
-      grounded: boolean;
-      lint_clean: boolean;
-      confidence: "HIGH" | "MEDIUM" | "LOW";
-      notes: string[];
-    }
-  >;
-  rejected_rules: any[];
-  lint_warnings: string[];
-  token_usage: Record<string, any>;
-  latency_ms: number;
-  summary: string;
-}
-
-export interface Finding {
-  type: string;
-  severity: string;
-  rule_ids: string[];
-  event_indices: number[];
-  trace: string;
-  details?: Record<string, unknown> | null;
-}
-
-export interface SimulateResponse {
-  outcomes: Array<{
-    event_index: number;
-    day: number;
-    event_type: string;
-    outcome: string;
-    action_applied: boolean;
-    resolution_type: string;
-    findings: Finding[];
-  }>;
-  final_state: Record<string, any>;
-  trace: {
-    event_traces: Array<{
-      event_index: number;
-      day: number;
-      event_type: string;
-      is_decision_event: boolean;
-      rules_evaluated: string[];
-      rules_fired: string[];
-      evaluations: Array<{
-        rule_id: string;
-        rule_name: string;
-        effect: string;
-        priority: number;
-        fired: boolean;
-        reason: string;
-        leaf_evaluations: Array<{ description: string; passed: boolean }>;
-      }>;
-      active_rules: string[];
-      suppressed_rules: string[];
-      findings: Finding[];
-      resolution_type: string;
-      outcome: string;
-      explanation: string;
-      state_before: Record<string, unknown>;
-      state_after: Record<string, unknown>;
-    }>;
-  };
-  findings: Finding[];
-}
-
-export interface SuiteResponse {
-  total_scenarios: number;
-  passed_scenarios: number;
-  failed_scenarios: number;
-  total_findings: number;
-  findings_count: number;
-  findings: Array<{
-    signature: [string, string[]];
-    finding: {
-      type: string;
-      severity: string;
-      rule_ids: string[];
-      event_indices: number[];
-      trace: string;
-      details?: Record<string, any>;
-    };
-    shrink?: {
-      original_journey: Array<{
-        event_type: string;
-        day: number;
-        payload?: any;
-      }>;
-      minimal_journey: Array<{
-        event_type: string;
-        day: number;
-        payload?: any;
-      }>;
-      original_length: number;
-      minimal_length: number;
-      engine_runs: number;
-      reduction_pct: number;
-    } | null;
-  }>;
-  summary_table: string;
-}
-
-export interface DiffResponse {
-  total_scenarios: number;
-  changed_rule_ids: string[];
-  outcomes_allow_to_deny: number;
-  outcomes_deny_to_allow: number;
-  outcome_changes: Array<{
-    scenario_id: string;
-    scenario_name: string;
-    event_index: number;
-    day: number;
-    event_type: string;
-    outcome_v1: string;
-    outcome_v2: string;
-    resolution_v1: string;
-    resolution_v2: string;
-    attributed_rule_ids: string[];
-    explanation: string;
-    needs_review: boolean;
-  }>;
-  finding_deltas: Array<{
-    scenario_id: string;
-    direction: "INTRODUCED" | "RESOLVED";
-    finding: any;
-  }>;
-  scenarios_needing_review: string[];
-  rule_text_diffs: Array<{
-    rule_id: string;
-    status: "ADDED" | "REMOVED" | "MODIFIED" | "UNCHANGED";
-    v1_summary?: string;
-    v2_summary?: string;
-    changes: string[];
-  }>;
-  coverage_v1: {
-    rule_coverage: number;
-    rules_fired: number;
-    rules_total: number;
-    uncovered_rule_ids: string[];
-    event_type_coverage: number;
-    transitions_observed: number;
-  };
-  coverage_v2: {
-    rule_coverage: number;
-    rules_fired: number;
-    rules_total: number;
-    uncovered_rule_ids: string[];
-    event_type_coverage: number;
-    transitions_observed: number;
-  };
-  health_v1: {
-    score: number;
-    no_critical_findings: number;
-    rule_coverage: number;
-    no_gaps: number;
-    no_ambiguities: number;
-    event_coverage: number;
-  };
-  health_v2: {
-    score: number;
-    no_critical_findings: number;
-    rule_coverage: number;
-    no_gaps: number;
-    no_ambiguities: number;
-    event_coverage: number;
-  };
-  summary: string;
-}
-
-async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const url = `${API_BASE}${endpoint}`;
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      ...options,
-    });
-    if (!res.ok) {
-      const errData = await res
-        .json()
-        .catch(() => ({ detail: res.statusText }));
-      const detail: unknown = errData.detail;
-      const message =
-        typeof detail === "string"
-          ? detail
-          : Array.isArray(detail)
-            ? detail
-                .map(
-                  (entry: { loc?: unknown[]; msg?: string }) =>
-                    `${entry.loc?.join(".") ?? "Request"}: ${entry.msg ?? "Invalid value"}`,
-                )
-                .join("; ")
-            : `Request failed with status ${res.status}`;
-      throw new Error(message);
-    }
-    return (await res.json()) as T;
-  } catch (err: any) {
+function requireSuite(params: {
+  suite_type?: string;
+  custom_scenarios?: SuiteRequest["custom_scenarios"];
+  limit?: number;
+}) {
+  if (
+    params.suite_type &&
+    !["boundary", "pairwise", "custom"].includes(params.suite_type)
+  )
+    throw new ApiError(
+      "This suite is unsupported by the offline client. No fallback suite was run.",
+      "validation",
+    );
+  if (
+    params.limit !== undefined &&
+    (!Number.isSafeInteger(params.limit) ||
+      params.limit < 1 ||
+      params.limit > 200)
+  )
+    throw new ApiError(
+      "Scenario limit must be an integer from 1 to 200.",
+      "validation",
+    );
+  if (params.suite_type === "custom") {
     if (
-      err.message?.includes("Failed to fetch") ||
-      err.message?.includes("NetworkError")
-    ) {
-      throw new Error(
-        `Unable to connect to PolicyForge backend at ${API_BASE}. Ensure the FastAPI server is running.`,
+      !params.custom_scenarios?.length ||
+      params.custom_scenarios.length > 200
+    )
+      throw new ApiError(
+        "Select 1 to 200 custom scenarios. Empty custom suites are not sent to the backend.",
+        "validation",
       );
-    }
-    throw err;
+    const ids = new Set<string>();
+    params.custom_scenarios.forEach((scenario) => {
+      if (
+        !scenario.id?.trim() ||
+        !scenario.name?.trim() ||
+        ids.has(scenario.id)
+      )
+        throw new ApiError(
+          "Each custom scenario needs a non-empty, unique ID and a name.",
+          "validation",
+        );
+      ids.add(scenario.id);
+      requireJourney(scenario.journey);
+    });
   }
 }
-
-export const api = {
-  getDefaultData: () => request<DefaultData>("/api/default-data"),
-
-  compile: (params: {
-    documents?: Record<string, string>;
-    document_text?: string;
-    doc_name?: string;
-    use_mock?: boolean;
-    max_repairs?: number;
-  }) =>
-    request<CompileResponse>("/api/compile", {
-      method: "POST",
-      body: JSON.stringify(params),
-    }),
-
-  simulate: (
-    params: {
-      rules: any[];
-      journey: Array<{ event_type: string; day: number; payload?: any }>;
-      default_decision_outcome?: string;
+export function createApiClient(config: HttpConfig = {}) {
+  const request = createTransport(config);
+  return {
+    health: (signal?: AbortSignal) =>
+      request("/api/health", healthContract, { signal }),
+    getDefaultData: (signal?: AbortSignal) =>
+      request("/api/default-data", defaultDataContract, { signal }),
+    // Prevent accidental provider access through the legacy, unmounted Compiler.
+    compile: (_params: CompileRequest): Promise<CompileResponse> =>
+      Promise.reject(
+        new ApiError(
+          "AI compilation is disabled in this offline workspace. Create structured rules or select a known demo.",
+          "disabled",
+        ),
+      ),
+    simulate: async (params: SimulateRequest, signal?: AbortSignal) => {
+      requireRules(params.rules);
+      requireJourney(params.journey);
+      return request("/api/simulate", simulationContract, {
+        body: params,
+        signal,
+      });
     },
-    signal?: AbortSignal,
-  ) =>
-    request<SimulateResponse>("/api/simulate", {
-      signal,
-      method: "POST",
-      body: JSON.stringify(params),
-    }),
-
-  runSuite: (
-    params: {
-      rules: any[];
-      suite_type?: "boundary" | "pairwise" | "custom";
-      custom_scenarios?: any[];
-      limit?: number;
+    runSuite: async (params: SuiteRequest, signal?: AbortSignal) => {
+      requireRules(params.rules);
+      requireSuite(params);
+      return request("/api/run-suite", suiteContract, {
+        body: params,
+        signal,
+        timeoutMs: config.timeoutMs ?? 60_000,
+      });
     },
-    signal?: AbortSignal,
-  ) =>
-    request<SuiteResponse>("/api/run-suite", {
-      signal,
-      method: "POST",
-      body: JSON.stringify(params),
-    }),
-
-  shrink: (params: {
-    rules: any[];
-    journey: Array<{ event_type: string; day: number; payload?: any }>;
-    target_finding_type?: string;
-    target_rule_ids?: string[];
-  }) =>
-    request<any>("/api/shrink", {
-      method: "POST",
-      body: JSON.stringify(params),
-    }),
-
-  diff: (params: {
-    rules_v1: any[];
-    rules_v2: any[];
-    suite_type?: "boundary" | "pairwise" | "custom";
-    limit?: number;
-  }) =>
-    request<DiffResponse>("/api/diff", {
-      method: "POST",
-      body: JSON.stringify(params),
-    }),
-};
+    shrink: async (params: ShrinkRequest, signal?: AbortSignal) => {
+      requireRules(params.rules);
+      requireJourney(params.journey);
+      return request("/api/shrink", shrinkContract, {
+        body: params,
+        signal,
+        timeoutMs: config.timeoutMs ?? 60_000,
+      });
+    },
+    diff: async (params: DiffRequest, signal?: AbortSignal) => {
+      requireRules(params.rules_v1);
+      requireRules(params.rules_v2);
+      requireSuite(params);
+      return request("/api/diff", diffContract, {
+        body: params,
+        signal,
+        timeoutMs: config.timeoutMs ?? 60_000,
+      });
+    },
+  };
+}
+export const api = createApiClient();

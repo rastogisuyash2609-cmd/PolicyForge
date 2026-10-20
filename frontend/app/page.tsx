@@ -70,9 +70,9 @@ const steps = [
   {
     number: "04",
     title: "Examine what changes",
-    text: "The backend can compare two rule sets. The comparison workspace is planned for a later phase.",
-    href: null,
-    link: "Backend capability · UI planned",
+    text: "Compare two explicit rule sets over shared journeys in the What-if workspace.",
+    href: "/workspace/what-if",
+    link: "Compare policies",
   },
 ];
 
@@ -347,14 +347,15 @@ export default function Home() {
             />
             <div>
               <h3 className="text-sm font-medium">
-                Rule comparison &amp; custom policy compilation
+                Policy comparison, with shared test input
               </h3>
               <p className="mt-1 text-sm leading-6 text-muted">
-                Supported by the backend. Dedicated workspace flows are still to
-                come; this demo uses existing NovaCart rules.
+                Compare demo rule sets or an explicit active-policy snapshot in
+                What-if. Automatic natural-language extraction remains
+                unavailable.
               </p>
             </div>
-            <Badge className="shrink-0 self-start">UI planned</Badge>
+            <Badge className="shrink-0 self-start">Comparison available</Badge>
           </div>
         </section>
 

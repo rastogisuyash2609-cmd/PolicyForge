@@ -301,7 +301,7 @@ export function ScenarioWorkbench() {
         <SimulationResults
           key={`${active.revision}:${scenarioJson}`}
           result={simulation.result}
-          policyName={active.name}
+          policyName={`${active.name} · revision ${active.revision} · ${active.fingerprint}`}
           scenarioName={simulation.scenarioName}
           rules={active.rules}
         />

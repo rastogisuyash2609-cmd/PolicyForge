@@ -34,6 +34,7 @@ export function useIssuesAnalysis(
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const simulationVersion = useRef(0);
+  const simulationChannel = useRef(new LatestRequest());
   const rulesMap = useMemo<Record<string, PolicyRule>>(
     () =>
       Object.fromEntries((policy?.rules ?? []).map((rule) => [rule.id, rule])),
@@ -98,6 +99,7 @@ export function useIssuesAnalysis(
   const shrink = item?.shrink;
   useEffect(() => {
     simulationVersion.current++;
+    simulationChannel.current.cancel();
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setEditJourney(
       (shrink?.minimal_journey ?? []).map((event) => ({
@@ -114,9 +116,11 @@ export function useIssuesAnalysis(
     const version = simulationVersion;
     const timer = debounceRef;
     const suiteRequests = suiteChannel.current;
+    const simulationRequests = simulationChannel.current;
     return () => {
       started.current = false;
       suiteRequests.cancel();
+      simulationRequests.cancel();
       version.current++;
       if (timer.current) clearTimeout(timer.current);
     };
@@ -126,6 +130,7 @@ export function useIssuesAnalysis(
     (journey: JourneyEvent[]) => {
       if (!policy || journey.length === 0) return;
       const version = ++simulationVersion.current;
+      const token = simulationChannel.current.begin();
       if (debounceRef.current) clearTimeout(debounceRef.current);
       setSimLoading(true);
       setSimError(null);
@@ -133,10 +138,13 @@ export function useIssuesAnalysis(
       setActiveStep(null);
       debounceRef.current = setTimeout(async () => {
         try {
-          const result = await api.simulate({
-            rules: policy.rules,
-            journey,
-          });
+          const result = await api.simulate(
+            {
+              rules: policy.rules,
+              journey,
+            },
+            token.signal,
+          );
           if (version === simulationVersion.current) setSimResult(result);
         } catch (error: unknown) {
           if (version === simulationVersion.current)

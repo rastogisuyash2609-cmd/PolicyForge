@@ -18,14 +18,14 @@ python -m uvicorn policyforge.api:app --host 127.0.0.1 --port 8000
 The public landing page is `/`. `/workspace` redirects to `/workspace/issues`;
 `/workspace/analyze` provides offline policy input, structured rule editing, and
 scenario execution. `/workspace/policies` displays the active rules; Issues uses
-those same rules for real suite and simulation requests. `/workspace/what-if` is
-an explicitly unfinished development route, hidden from primary navigation.
+those same rules for real suite and simulation requests. `/workspace/what-if`
+compares explicit fixture rule sets or an explicitly captured active-policy snapshot.
 Other screens remain unmounted.
 
 `app/workspace/layout.tsx` owns a persistent WorkspaceProvider and WorkspaceShell.
 The provider loads fixtures once and retains the editor draft, active policy,
 scenario input, and selected suite journeys. Its revision-keyed AnalysisSession
-owns `useIssuesAnalysis` and `usePolicySimulation`. Normal workspace navigation
+owns `useIssuesAnalysis`, `usePolicySimulation`, and `usePolicyComparison`. Normal workspace navigation
 preserves analysis; activation clears previous results and cancels/invalidates
 old requests. Changing suite journeys invalidates only that suite, preserving
 editor focus and independent scenario results. The first suite starts on entering
@@ -43,6 +43,21 @@ their route unmounts. No database or permanent analysis storage was added.
 4. Select or edit a supported journey and Run Simulation. Inspect actual outcomes,
    findings, fired/suppressed rules, event-local state and the backend explanation.
 5. Use Policies for active rule inspection or Issues for the selected sample suite.
+
+In What-if, choose baseline and comparison rules, select shared demo/current
+journeys or a clearly labelled limited generated suite, then Compare policies.
+Capture active rules to use the current policy as an explicit immutable snapshot.
+No automatic comparison or version history is created. Input edits hide old
+results; policy activation clears comparison state. Boundary generation is
+baseline-only; backend “pairwise” uses fixed patterns. The UI shows both the
+requested cap and actual executed count and qualifies attribution/coverage.
+
+The API client uses runtime success decoders, readable structured errors,
+AbortSignal support and timeouts (30 seconds for GET/simulate; 60 for suite,
+shrink and diff). ApiError exposes kind/status/diagnostics for developers; raw
+500 exception details are not displayed to users. GET requests omit Content-Type
+to avoid unnecessary CORS preflight. Fixture status does not claim that all
+endpoints work. The legacy compile method rejects locally without a request.
 
 Policy text is reference material only. No automatic prose extraction, mock
 compilation, Nebius configuration, credential access, or external inference is
@@ -76,7 +91,11 @@ npm run build
 Tests use the existing TypeScript compiler and Node's built-in test runner;
 no additional testing package is required. `test:integration` requires local
 FastAPI at `http://127.0.0.1:8000` (override `POLICYFORGE_TEST_API` if needed) and
-calls only default-data, simulate and run-suite. It makes no LLM requests.
+calls health, default-data, simulate, run-suite, shrink and diff. It makes no compile
+or LLM requests. `node .test-output/tests/backend-contract-probes.js` prints bounded
+raw-backend observations for owner coordination; these are not acceptance claims
+for unsafe backend behavior. To run backend regressions without executing compile:
+`pytest -q -m 'not live' -k 'not test_api_compile_with_mock'` with backend PYTHONPATH.
 Generated test output is ignored.
 
 ## Quiet Intelligence design system
@@ -99,14 +118,16 @@ Generated test output is ignored.
 
 ## Scope and remaining work
 
-Phase 4 adds offline policy input, manual rules, active policy management, and
-deterministic analysis to the routed workspace. Live natural-language extraction,
-file upload, permanent history, authentication, and comparison integration remain
-deferred. No new dependencies were added. API contracts and backend logic remain
+Phase 5 adds reliable typed API transport and working offline comparison to the
+active-policy workspace. Live natural-language extraction, file upload, permanent
+history and authentication remain deferred. No new dependencies were added.
+Shared backend API contracts and deterministic logic remain
 unchanged. Existing unmounted screens need their own review before mounting.
 
 Backend validation, invariant-signature grouping, diff attribution/coverage, and
 formal response models remain backend-owner follow-ups from the audit. The UI
 does not claim exhaustive policy coverage or globally shortest counterexamples.
 
-See `PHASE2.md`, `PHASE3.md`, and `PHASE4.md` for verification evidence.
+See `PHASE5.md` for current verification, `API_CONTRACTS.md` for all seven endpoint
+contracts, and `BACKEND_CONTRACT_FINDINGS.md` for teammate coordination. Earlier
+phase reports remain historical evidence.

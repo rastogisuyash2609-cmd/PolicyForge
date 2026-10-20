@@ -1,315 +1,318 @@
 "use client";
+import { useState } from "react";
+import type { DiffResponse } from "../../lib/api-types";
+import { eventLabel, findingTitle } from "../../lib/translate";
+import { Alert, Badge, Card, Disclosure } from "../ui/primitives";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import {
-  GitCompare,
-  ArrowRight,
-  TrendingDown,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle2,
-  RefreshCw,
-  Sliders,
-  ShieldCheck,
-  FileDiff,
-  Eye,
-} from "lucide-react";
-import { api, DefaultData, DiffResponse } from "@/lib/api";
-
-interface PolicyDiffProps {
-  defaultData: DefaultData | null;
-}
-
-export function PolicyDiff({ defaultData }: PolicyDiffProps) {
-  const [suiteType, setSuiteType] = useState<"boundary" | "pairwise">("boundary");
-  const [limit, setLimit] = useState<number>(20);
-  const [diffData, setDiffData] = useState<DiffResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [filterReviewOnly, setFilterReviewOnly] = useState<boolean>(false);
-
-  const autoRun = useRef(false);
-  const handleRunDiff = useCallback(async () => {
-    if (!defaultData?.rules_v1 || !defaultData?.rules_v2) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.diff({
-        rules_v1: defaultData.rules_v1,
-        rules_v2: defaultData.rules_v2,
-        suite_type: suiteType,
-        limit: limit,
-      });
-      setDiffData(res);
-    } catch (err: any) {
-      setError(err.message || "Failed to execute policy behavioral diff.");
-    } finally {
-      setLoading(false);
-    }
-  }, [defaultData, suiteType, limit]);
-
-  useEffect(() => {
-    if (!defaultData?.rules_v1 || !defaultData?.rules_v2 || autoRun.current) return;
-    autoRun.current = true;
-    void handleRunDiff();
-  }, [defaultData, handleRunDiff]);
-
-  const displayedChanges = diffData?.outcome_changes.filter((c) =>
-    filterReviewOnly ? c.needs_review : true
-  ) || [];
-
+// Refactored from the fixed-version prototype. Every metric below is backend output.
+export function PolicyDiff({
+  data,
+  baselineLabel,
+  candidateLabel,
+  scopeLabel,
+}: {
+  data: DiffResponse;
+  baselineLabel: string;
+  candidateLabel: string;
+  scopeLabel: string;
+}) {
+  const [reviewOnly, setReviewOnly] = useState(false);
+  const changes = data.outcome_changes.filter(
+    (change) => !reviewOnly || change.needs_review,
+  );
+  const ruleChanges = data.rule_text_diffs.filter(
+    (rule) => rule.status !== "UNCHANGED",
+  );
   return (
-    <div className="space-y-6">
-      {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-slate-900/90 border border-slate-800">
-        <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <GitCompare className="w-5 h-5 text-indigo-400" />
-            Behavioral Policy Diff
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Replaying scenario suite across NovaCart v1 (30d window) vs NovaCart v2 (14d window) to detect outcome shifts and regressions.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-            <button
-              onClick={() => setSuiteType("boundary")}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                suiteType === "boundary" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Boundary Suite
-            </button>
-            <button
-              onClick={() => setSuiteType("pairwise")}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                suiteType === "pairwise" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Pairwise Suite
-            </button>
-          </div>
-
-          <button
-            onClick={handleRunDiff}
-            disabled={loading}
-            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/20 transition-all"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-            {loading ? "Diffing..." : "Recompute Diff"}
-          </button>
-        </div>
+    <section aria-labelledby="comparison-results" className="space-y-5">
+      <div>
+        <p className="eyebrow">Actual backend comparison</p>
+        <h2 id="comparison-results" className="mt-2 text-section-title">
+          Comparison results
+        </h2>
+        <p className="mt-2 break-words text-sm text-muted">
+          Baseline: {baselineLabel}
+          <br />
+          Comparison: {candidateLabel}
+        </p>
+        <p className="mt-2 text-xs leading-6 text-muted">
+          {scopeLabel}. Executed {data.total_scenarios} journeys on each rule
+          set. This is limited scenario evidence, not exhaustive regression
+          verification.
+        </p>
       </div>
-
-      {error && (
-        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          {error}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { label: "Journeys executed", value: data.total_scenarios },
+          { label: "ALLOW → DENY events", value: data.outcomes_allow_to_deny },
+          { label: "DENY → ALLOW events", value: data.outcomes_deny_to_allow },
+          {
+            label: "Journeys flagged for review",
+            value: data.scenarios_needing_review.length,
+          },
+        ].map((metric) => (
+          <Card key={metric.label} className="p-4">
+            <p className="min-h-10 text-xs text-muted">{metric.label}</p>
+            <p className="text-2xl font-semibold tabular-nums">
+              {metric.value}
+            </p>
+          </Card>
+        ))}
+      </div>
+      <Card className="space-y-4 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-sm font-medium">
+            Outcome / resolution changes · {data.outcome_changes.length} events
+          </h3>
+          <label className="flex min-h-11 items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-primary"
+              checked={reviewOnly}
+              onChange={(e) => setReviewOnly(e.target.checked)}
+            />
+            Only flagged events
+          </label>
         </div>
-      )}
-
-      {/* Top Behavioral Shifts Cards */}
-      {diffData && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-            <span className="text-[11px] text-slate-400 uppercase font-semibold">ALLOW → DENY</span>
-            <div className="text-2xl font-bold text-rose-400 mt-1 flex items-baseline gap-1.5">
-              <span>{diffData.outcomes_allow_to_deny}</span>
-              <span className="text-xs text-slate-500 font-normal">scenarios narrowed</span>
-            </div>
+        <p className="text-xs leading-6 text-muted">
+          Counts are changed event outcomes or resolution types, not distinct
+          scenarios. Attribution candidates come from differences in fired-rule
+          IDs; they are not proof of causality.
+        </p>
+        {changes.length === 0 ? (
+          <p className="rounded-lg border border-border bg-bg p-4 text-sm text-muted">
+            {reviewOnly
+              ? "No changed events match this filter."
+              : "No outcome or resolution changes were observed in the tested journeys."}
+          </p>
+        ) : (
+          <div
+            role="region"
+            aria-label="Outcome changes table; scroll horizontally"
+            tabIndex={0}
+            className="max-w-full overflow-x-auto"
+          >
+            <table className="w-full min-w-[760px] text-left text-xs">
+              <caption className="sr-only">
+                Actual changed events from baseline to comparison
+              </caption>
+              <thead>
+                <tr className="border-b border-border text-muted">
+                  {[
+                    "Journey / event",
+                    "Baseline",
+                    "Comparison",
+                    "Backend attribution candidates",
+                    "Review / details",
+                  ].map((heading) => (
+                    <th key={heading} scope="col" className="p-3 font-medium">
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {changes.map((change, i) => (
+                  <tr
+                    key={`${change.scenario_id}:${change.event_index}:${i}`}
+                    className="border-b border-border align-top"
+                  >
+                    <td className="max-w-64 p-3">
+                      <p className="font-medium">{change.scenario_name}</p>
+                      <p className="mt-1 text-muted">
+                        {eventLabel(change.event_type)} · day {change.day} ·
+                        index {change.event_index}
+                      </p>
+                    </td>
+                    <td className="p-3">
+                      <Badge
+                        tone={
+                          change.outcome_v1 === "ALLOW" ? "success" : "danger"
+                        }
+                      >
+                        {change.outcome_v1}
+                      </Badge>
+                      <p className="mt-2 break-all font-mono text-[11px] text-muted">
+                        {change.resolution_v1}
+                      </p>
+                    </td>
+                    <td className="p-3">
+                      <Badge
+                        tone={
+                          change.outcome_v2 === "ALLOW" ? "success" : "danger"
+                        }
+                      >
+                        {change.outcome_v2}
+                      </Badge>
+                      <p className="mt-2 break-all font-mono text-[11px] text-muted">
+                        {change.resolution_v2}
+                      </p>
+                    </td>
+                    <td className="max-w-52 break-all p-3 font-mono text-[11px] text-muted">
+                      {change.attributed_rule_ids.join(", ") ||
+                        "Attribution unavailable"}
+                    </td>
+                    <td className="max-w-72 p-3">
+                      <Badge tone={change.needs_review ? "warning" : "neutral"}>
+                        {change.needs_review ? "Review flagged" : "Not flagged"}
+                      </Badge>
+                      <Disclosure title="Backend explanation">
+                        <p className="whitespace-pre-wrap break-words text-xs leading-6 text-muted">
+                          {change.explanation}
+                        </p>
+                      </Disclosure>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-            <span className="text-[11px] text-slate-400 uppercase font-semibold">DENY → ALLOW</span>
-            <div className="text-2xl font-bold text-emerald-400 mt-1 flex items-baseline gap-1.5">
-              <span>{diffData.outcomes_deny_to_allow}</span>
-              <span className="text-xs text-slate-500 font-normal">scenarios widened</span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-            <span className="text-[11px] text-slate-400 uppercase font-semibold">Health Score (v1 → v2)</span>
-            <div className="text-2xl font-bold text-white mt-1 flex items-baseline gap-2">
-              <span className="text-slate-400">{diffData.health_v1.score}</span>
-              <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
-              <span className="text-indigo-400">{diffData.health_v2.score}</span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-            <span className="text-[11px] text-slate-400 uppercase font-semibold">Manual Review Required</span>
-            <div className="text-2xl font-bold text-amber-400 mt-1 flex items-baseline gap-1.5">
-              <span>{diffData.scenarios_needing_review.length}</span>
-              <span className="text-xs text-slate-500 font-normal">potential gaps/ambiguities</span>
-            </div>
-          </div>
+        )}
+      </Card>
+      <Card className="space-y-4 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-sm font-medium">Rule definition changes</h3>
+          <Badge>{data.changed_rule_ids.length} changed IDs</Badge>
         </div>
-      )}
-
-      {loading ? (
-        <div className="p-24 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col items-center justify-center text-slate-400">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3" />
-          <p className="text-xs">Replaying scenarios on both v1 and v2 engines to compute behavioral diff...</p>
-        </div>
-      ) : diffData ? (
-        <div className="space-y-6">
-          {/* Changed Journeys Table */}
-          <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-              <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-rose-500" />
-                  Outcome Changes Across Scenarios ({displayedChanges.length})
-                </h3>
-                <p className="text-[11px] text-slate-400">
-                  Every behavioral shift is attributed to changed rules via execution traces.
-                </p>
+        <p className="text-xs leading-6 text-muted">
+          Backend field comparison reports added, removed and modified rule
+          definitions. Source-only quotation changes are not included by this
+          backend implementation.
+        </p>
+        {ruleChanges.length ? (
+          ruleChanges.map((rule) => (
+            <Disclosure
+              key={rule.rule_id}
+              title={`${rule.status} · ${rule.rule_id}`}
+            >
+              <ul className="list-inside list-disc space-y-2 break-words text-xs text-muted">
+                {rule.changes.map((change, i) => (
+                  <li key={i}>{change}</li>
+                ))}
+              </ul>
+              <div className="mt-4 grid min-w-0 gap-3 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <p className="mb-2 text-xs">Baseline definition</p>
+                  <pre className="technical-block whitespace-pre-wrap break-words">
+                    {rule.v1_summary ?? "Not present"}
+                  </pre>
+                </div>
+                <div className="min-w-0">
+                  <p className="mb-2 text-xs">Comparison definition</p>
+                  <pre className="technical-block whitespace-pre-wrap break-words">
+                    {rule.v2_summary ?? "Not present"}
+                  </pre>
+                </div>
               </div>
-
-              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filterReviewOnly}
-                  onChange={(e) => setFilterReviewOnly(e.target.checked)}
-                  className="rounded border-slate-700 text-indigo-600 focus:ring-0"
-                />
-                <span>Only show &ldquo;Needs Review&rdquo;</span>
-              </label>
-            </div>
-
-            {displayedChanges.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-500">
-                No outcome changes matching current filter.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-[10px] text-slate-500 uppercase tracking-wider">
-                      <th className="pb-2.5 font-semibold">Scenario</th>
-                      <th className="pb-2.5 font-semibold">Event @ Day</th>
-                      <th className="pb-2.5 font-semibold">v1 Outcome</th>
-                      <th className="pb-2.5 font-semibold">v2 Outcome</th>
-                      <th className="pb-2.5 font-semibold">Attributed Rule(s)</th>
-                      <th className="pb-2.5 font-semibold">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono">
-                    {displayedChanges.map((c, i) => (
-                      <tr key={i} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 pr-3 font-semibold text-slate-200">
-                          {c.scenario_id}
-                        </td>
-                        <td className="py-3 pr-3 text-slate-400">
-                          {c.event_type} @ d{c.day}
-                        </td>
-                        <td className="py-3 pr-3">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              c.outcome_v1 === "ALLOW"
-                                ? "bg-emerald-500/20 text-emerald-300"
-                                : "bg-rose-500/20 text-rose-300"
-                            }`}
-                          >
-                            {c.outcome_v1}
-                          </span>
-                        </td>
-                        <td className="py-3 pr-3">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              c.outcome_v2 === "ALLOW"
-                                ? "bg-emerald-500/20 text-emerald-300"
-                                : "bg-rose-500/20 text-rose-300"
-                            }`}
-                          >
-                            {c.outcome_v2}
-                          </span>
-                        </td>
-                        <td className="py-3 pr-3 text-indigo-300 text-[11px]">
-                          {c.attributed_rule_ids.join(", ") || "threshold shift"}
-                        </td>
-                        <td className="py-3 pr-3">
-                          {c.needs_review ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                              ⚠ Needs Review
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">
-                              Expected Shift
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Rule-Level Textual Diff */}
-          <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 space-y-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-800">
-              <FileDiff className="w-4 h-4 text-cyan-400" />
-              Rule-Level Specification Diff ({diffData.rule_text_diffs.length} rules)
+            </Disclosure>
+          ))
+        ) : (
+          <p className="text-sm text-muted">
+            No rule definition changes reported.
+          </p>
+        )}
+      </Card>
+      <Card className="space-y-4 p-5">
+        <h3 className="text-sm font-medium">
+          Finding differences · {data.finding_deltas.length} entries
+        </h3>
+        <Alert tone="info" title="Finding identity limitation">
+          Backend grouping uses finding type and sorted rule IDs. Distinct
+          invariant failures can share this identity. Review traces before
+          interpreting an issue as resolved.
+        </Alert>
+        {data.finding_deltas.length ? (
+          data.finding_deltas.map((delta, i) => (
+            <Disclosure
+              key={i}
+              title={`${delta.direction} · ${findingTitle(delta.finding.type)} · ${delta.scenario_id}`}
+            >
+              <Badge
+                tone={delta.direction === "INTRODUCED" ? "warning" : "success"}
+              >
+                {delta.direction}
+              </Badge>
+              <p className="mt-3 text-xs text-muted">
+                Severity: {delta.finding.severity} · Event indices:{" "}
+                {delta.finding.event_indices.join(", ")}
+              </p>
+              <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-muted">
+                {delta.finding.trace}
+              </p>
+            </Disclosure>
+          ))
+        ) : (
+          <p className="text-sm text-muted">
+            No finding-signature changes reported for these journeys.
+          </p>
+        )}
+        {data.scenarios_needing_review.length > 0 && (
+          <p className="break-words text-xs text-warning">
+            Journeys flagged by backend:{" "}
+            {data.scenarios_needing_review.join(", ")}
+          </p>
+        )}
+      </Card>
+      <div className="grid gap-4 md:grid-cols-2">
+        {[
+          {
+            label: "Baseline",
+            coverage: data.coverage_v1,
+            health: data.health_v1,
+          },
+          {
+            label: "Comparison",
+            coverage: data.coverage_v2,
+            health: data.health_v2,
+          },
+        ].map(({ label, coverage, health }) => (
+          <Card key={label} className="space-y-4 p-5">
+            <h3 className="text-sm font-medium">
+              {label} coverage &amp; heuristic
             </h3>
-
-            <div className="space-y-3">
-              {diffData.rule_text_diffs.map((d) => {
-                const badgeColor =
-                  d.status === "MODIFIED"
-                    ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                    : d.status === "ADDED"
-                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                    : d.status === "REMOVED"
-                    ? "bg-rose-500/20 text-rose-300 border-rose-500/30"
-                    : "bg-slate-800 text-slate-400 border-slate-700";
-
-                return (
-                  <div key={d.rule_id} className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${badgeColor}`}>
-                          {d.status}
-                        </span>
-                        <span className="font-mono text-xs text-white font-semibold">{d.rule_id}</span>
-                      </div>
-                    </div>
-
-                    {d.changes.length > 0 && (
-                      <div className="space-y-1 pt-1 text-xs font-mono text-amber-300/90">
-                        {d.changes.map((change, cIdx) => (
-                          <div key={cIdx} className="flex items-start gap-1.5">
-                            <span className="text-amber-400">Δ</span>
-                            <span>{change}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono text-slate-400 pt-1">
-                      {d.v1_summary && (
-                        <div className="p-2 rounded bg-slate-900/60 border border-slate-800/60">
-                          <span className="text-slate-500 uppercase text-[9px] block">v1 spec:</span>
-                          <span className="line-clamp-2">{d.v1_summary}</span>
-                        </div>
-                      )}
-                      {d.v2_summary && (
-                        <div className="p-2 rounded bg-slate-900/60 border border-slate-800/60">
-                          <span className="text-slate-500 uppercase text-[9px] block">v2 spec:</span>
-                          <span className="line-clamp-2 text-indigo-300">{d.v2_summary}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </div>
+            <dl className="space-y-2 text-sm">
+              <div className="flex flex-wrap justify-between gap-2">
+                <dt className="text-muted">Rules fired at least once</dt>
+                <dd>
+                  {coverage.rules_fired} / {coverage.rules_total} (
+                  {(coverage.rule_coverage * 100).toFixed(1)}%)
+                </dd>
+              </div>
+              <div className="flex flex-wrap justify-between gap-2">
+                <dt className="text-muted">Event types observed</dt>
+                <dd>{(coverage.event_type_coverage * 100).toFixed(1)}%</dd>
+              </div>
+              <div className="flex flex-wrap justify-between gap-2">
+                <dt className="text-muted">Distinct decision transitions</dt>
+                <dd>{coverage.transitions_observed}</dd>
+              </div>
+              <div className="flex flex-wrap justify-between gap-2">
+                <dt className="text-muted">Backend health heuristic</dt>
+                <dd>{health.score} / 100</dd>
+              </div>
+            </dl>
+            <p className="text-xs leading-6 text-muted">
+              Rule coverage includes fired rules that were subsequently
+              suppressed. Health is a suite-dependent backend formula, not
+              accuracy, compliance or completeness.
+            </p>
+            <Disclosure title={`${label} coverage details`}>
+              <p className="mb-3 break-all text-xs text-muted">
+                Unfired rule IDs:{" "}
+                {coverage.uncovered_rule_ids.join(", ") || "None"}
+              </p>
+              <pre className="technical-block">
+                {JSON.stringify({ coverage, health }, null, 2)}
+              </pre>
+            </Disclosure>
+          </Card>
+        ))}
+      </div>
+      <Disclosure title="Backend comparison summary (Markdown)">
+        <pre className="technical-block whitespace-pre-wrap break-words">
+          {data.summary}
+        </pre>
+      </Disclosure>
+    </section>
   );
 }

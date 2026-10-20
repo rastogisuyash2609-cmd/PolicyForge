@@ -109,7 +109,7 @@ export function IssuesScreen() {
       <SectionHeader
         eyebrow="Deterministic verification"
         title="Policy issues"
-        description={`Analyze ${active?.name ?? "the active policy"}. Findings come from the selected engine-domain journeys, not exhaustive policy coverage.`}
+        description={`Analyze ${active?.name ?? "the active policy"} · revision ${active?.revision ?? "—"}. Findings come from the selected engine-domain journeys, not exhaustive policy coverage.`}
         action={
           <Button variant="secondary" onClick={runSuite} loading={loading}>
             {!loading && <RefreshCw aria-hidden="true" className="h-4 w-4" />}
@@ -118,17 +118,27 @@ export function IssuesScreen() {
         }
       />
 
-      <Card className="grid grid-cols-3 divide-x divide-border">
+      <Card className="grid grid-cols-2 gap-px overflow-hidden bg-border sm:grid-cols-3 xl:grid-cols-5">
         {[
           {
-            label: "Unique findings",
+            label: "Unique signatures",
             value: suite?.findings_count,
             icon: ShieldAlert,
           },
           {
-            label: "Journeys tested",
+            label: "Journeys executed",
             value: suite?.total_scenarios,
             icon: FlaskConical,
+          },
+          {
+            label: "With findings",
+            value: suite?.failed_scenarios,
+            icon: ShieldAlert,
+          },
+          {
+            label: "Finding occurrences",
+            value: suite?.total_findings,
+            icon: Layers,
           },
           {
             label: "Policy rules",
@@ -138,7 +148,7 @@ export function IssuesScreen() {
         ].map(({ label, value, icon: Icon }) => (
           <div
             key={label}
-            className="flex items-center justify-between gap-3 px-3 py-4 sm:px-5"
+            className="flex items-center justify-between gap-3 bg-surface px-3 py-4 sm:px-5"
           >
             <div>
               <p className="min-h-8 text-xs leading-4 text-muted sm:min-h-0">
@@ -160,6 +170,13 @@ export function IssuesScreen() {
         ))}
       </Card>
 
+      {suite && !loading && !error && (
+        <Disclosure title="Backend suite summary (Markdown)">
+          <pre className="technical-block whitespace-pre-wrap break-words">
+            {suite.summary_table}
+          </pre>
+        </Disclosure>
+      )}
       {loading ? (
         <Card className="space-y-5 p-6">
           <LoadingState label="Running journeys and reducing counterexamples…" />
@@ -260,6 +277,18 @@ export function IssuesScreen() {
             >
               <Card className="overflow-hidden">
                 <div className="border-b border-border p-5 sm:p-6">
+                  {finding.type === "INVARIANT_VIOLATION" && (
+                    <Alert
+                      tone="warning"
+                      title="Backend grouping limitation"
+                      className="mb-4"
+                    >
+                      Different invariants can share the same type/rule-ID
+                      signature. A reduced journey preserves that signature, not
+                      necessarily the original invariant. Review the original
+                      trace.
+                    </Alert>
+                  )}
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <Badge tone="primary">
                       <ShieldCheck aria-hidden="true" className="h-3 w-3" />

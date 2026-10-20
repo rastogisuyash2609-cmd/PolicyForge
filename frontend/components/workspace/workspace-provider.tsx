@@ -12,6 +12,7 @@ import {
 import { usePathname } from "next/navigation";
 import { api, type DefaultData } from "@/lib/api";
 import { useIssuesAnalysis } from "@/lib/use-issues-analysis";
+import { usePolicyComparison } from "@/lib/use-policy-comparison";
 import { usePolicySimulation } from "@/lib/use-policy-simulation";
 import {
   activateDraft,
@@ -42,6 +43,7 @@ type WorkspaceState = {
   setEditorIndex: React.Dispatch<React.SetStateAction<number>>;
   issues: ReturnType<typeof useIssuesAnalysis>;
   simulation: ReturnType<typeof usePolicySimulation>;
+  comparison: ReturnType<typeof usePolicyComparison>;
 };
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
 
@@ -149,7 +151,7 @@ function AnalysisSession({
   scenarios,
   children,
 }: {
-  workspace: Omit<WorkspaceState, "issues" | "simulation">;
+  workspace: Omit<WorkspaceState, "issues" | "simulation" | "comparison">;
   scenarios: Scenario[];
   children: React.ReactNode;
 }) {
@@ -163,8 +165,16 @@ function AnalysisSession({
     workspace.active,
     workspace.scenarioJson,
   );
+  const comparison = usePolicyComparison(
+    workspace.defaultData,
+    workspace.active,
+    workspace.scenarioJson,
+    workspace.scenarioName,
+  );
   return (
-    <WorkspaceContext.Provider value={{ ...workspace, issues, simulation }}>
+    <WorkspaceContext.Provider
+      value={{ ...workspace, issues, simulation, comparison }}
+    >
       {children}
     </WorkspaceContext.Provider>
   );

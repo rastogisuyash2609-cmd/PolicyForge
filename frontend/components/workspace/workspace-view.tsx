@@ -14,7 +14,6 @@ export function WorkspaceView({
   view: "issues" | "policies" | "what-if" | "analyze";
 }) {
   const { defaultData, loading, error, retry } = useWorkspace();
-  if (view === "what-if") return <WhatIfScreen defaultData={defaultData} />;
   if (loading)
     return (
       <div
@@ -41,6 +40,7 @@ export function WorkspaceView({
         </Button>
       </Card>
     );
+  if (view === "what-if") return <WhatIfScreen />;
   if (view === "analyze") return <AnalyzeScreen />;
   return view === "issues" ? <IssuesScreen /> : <PoliciesScreen />;
 }

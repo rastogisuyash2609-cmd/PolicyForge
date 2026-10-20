@@ -42,7 +42,7 @@ export function findingTitle(raw: string): string {
 type FindingSummary = {
   type: string;
   rule_ids?: string[];
-  details?: Record<string, unknown>;
+  details?: Record<string, unknown> | null;
   trace?: string;
 };
 type RuleNames = Record<string, { name: string; effect?: string }>;

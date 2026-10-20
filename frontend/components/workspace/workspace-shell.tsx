@@ -10,6 +10,7 @@ import {
   PanelLeftOpen,
   ShieldAlert,
   FileSearch,
+  GitCompareArrows,
 } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { NavigationDrawer } from "@/components/navigation-drawer";
@@ -22,6 +23,7 @@ const navigation = [
   { href: "/workspace/analyze", label: "Analyze Policy", icon: FileSearch },
   { href: "/workspace/issues", label: "Issues", icon: ShieldAlert },
   { href: "/workspace/policies", label: "Policies", icon: FileText },
+  { href: "/workspace/what-if", label: "What-if", icon: GitCompareArrows },
 ];
 
 function WorkspaceLinks({ collapsed = false }: { collapsed?: boolean }) {
@@ -56,8 +58,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const { loading, error, active } = useWorkspace();
   const title =
-    navigation.find((item) => item.href === pathname)?.label ??
-    "What-if · planned";
+    navigation.find((item) => item.href === pathname)?.label ?? "Workspace";
   return (
     <div className="flex min-h-dvh">
       <a href="#workspace-content" className="skip-link">
