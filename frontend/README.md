@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PolicyForge frontend
 
-## Getting Started
+Next.js 14, React 18, TypeScript, Tailwind CSS 3, Framer Motion, and Lucide.
 
-First, run the development server:
+## Run locally
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+From this directory, run `npm ci`, then `npm run dev`. The application uses
+`NEXT_PUBLIC_API_URL` or `http://localhost:8000` as the backend base URL.
+
+The Python API must be running separately. From the repository root, with the
+backend dependencies installed in a Python 3.11 environment:
+
+```powershell
+$env:PYTHONPATH = Join-Path (Get-Location) 'backend'
+python -m uvicorn policyforge.api:app --host 127.0.0.1 --port 8000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The mounted screens are Issues, Policies, and What-if. Issues uses real suite
+and simulation responses. Policies displays the existing NovaCart v1 fixtures.
+What-if is explicitly a placeholder. Other screen components remain unmounted.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Frontend checks
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```text
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
 
-## Learn More
+Tests use the existing TypeScript compiler and Node's built-in test runner;
+no additional testing package is required. Generated test output is ignored.
 
-To learn more about Next.js, take a look at the following resources:
+## Quiet Intelligence design system
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Semantic RGB-channel tokens live in `app/globals.css`; Tailwind exposes them
+  with opacity support. Light and dark themes have separately tuned palettes.
+- Use `bg-bg`, `bg-surface`, `bg-raised`, `text-text`, `text-muted`, and semantic
+  severity colors. `selected-text` supplies accessible text on lavender surfaces.
+- Keep Tailwind's standard 4px spacing scale. Prefer even increments for an 8px
+  layout rhythm; do not redefine the meaning of existing spacing utilities.
+- Local Geist and Geist Mono fonts are loaded with `next/font/local`.
+- `components/ui/primitives.tsx` contains the shared Button, Card, Badge, Alert,
+  Disclosure, EmptyState, Skeleton, LoadingState, SectionHeader, and StatusIndicator.
+- `components/ui/tabs.tsx` implements linked panels, roving focus, arrows, Home,
+  and End. Disclosures use native details/summary keyboard behavior.
+- Theme preference uses `pf-theme` in localStorage, with OS preference as the
+  fallback. A pre-paint script sets the theme before hydration; storage failure
+  does not prevent switching. Theme changes do not remount analysis screens.
+- Motion is restrained. CSS and MotionConfig respect reduced-motion preferences.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scope and remaining work
 
-## Deploy on Vercel
+Phase 2 does not add routes, a landing page, policy submission, upload, history,
+authentication, or comparison integration. API contracts and backend logic remain
+unchanged. Existing unmounted screens retain their workflows and need their own
+design/accessibility pass before mounting.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Backend validation, invariant-signature grouping, diff attribution/coverage, and
+formal response models remain backend-owner follow-ups from the audit. The UI
+does not claim exhaustive policy coverage or globally shortest counterexamples.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `PHASE2.md` for implementation and verification evidence.

@@ -1,101 +1,129 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Light theme tokens ─────────────────────────────────────────────── */
-:root {
-  --color-bg:         #F5F3EE;
-  --color-surface:    #FFFFFF;
-  --color-border:     #E2E0D8;
-  --color-text:       #1F2A30;
-  --color-muted:      #5C6B73;
-  --color-primary:    #2F7D74;
-  --color-allow:      #3E8E5A;
-  --color-allow-bg:   #E3F1E7;
-  --color-deny:       #C4574B;
-  --color-deny-bg:    #F8E4E1;
-  --color-warning:    #B7791F;
-  --color-warning-bg: #FAF0D7;
+@layer base {
+  :root {
+    color-scheme: light;
+    --background: 248 250 252;
+    --surface: 255 255 255;
+    --elevated: 255 255 255;
+    --sidebar: 248 250 252;
+    --foreground: 17 24 39;
+    --muted: 100 116 139;
+    --border: 226 232 240;
+    --primary: 99 91 219;
+    --primary-hover: 82 73 196;
+    --on-primary: 255 255 255;
+    --secondary: 15 138 131;
+    --hover: 241 245 249;
+    --selected: 233 231 252;
+    --selected-text: 83 74 195;
+    --focus: 99 91 219;
+    --disabled: 241 245 249;
+    --disabled-text: 100 116 139;
+    --success: 15 118 110;
+    --success-bg: 236 253 245;
+    --warning: 146 64 14;
+    --warning-bg: 255 251 235;
+    --danger: 185 28 28;
+    --danger-bg: 254 242 242;
+    --info: 29 78 216;
+    --info-bg: 239 246 255;
+    --shadow: 16 24 39;
+  }
+  .dark {
+    color-scheme: dark;
+    --background: 16 24 39;
+    --surface: 23 33 50;
+    --elevated: 29 41 61;
+    --sidebar: 19 28 45;
+    --foreground: 237 242 250;
+    --muted: 161 174 195;
+    --border: 47 62 84;
+    --primary: 168 162 255;
+    --primary-hover: 190 186 255;
+    --on-primary: 22 24 50;
+    --secondary: 94 218 201;
+    --hover: 34 47 68;
+    --selected: 45 42 79;
+    --selected-text: 190 186 255;
+    --focus: 168 162 255;
+    --disabled: 34 47 68;
+    --disabled-text: 161 174 195;
+    --success: 94 218 201;
+    --success-bg: 21 51 51;
+    --warning: 250 204 126;
+    --warning-bg: 58 43 28;
+    --danger: 252 165 165;
+    --danger-bg: 60 36 45;
+    --info: 147 197 253;
+    --info-bg: 28 46 75;
+    --shadow: 0 0 0;
+  }
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+  }
+  body {
+    @apply bg-bg font-sans text-text antialiased;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+  button,
+  summary,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--focus));
+    outline-offset: 3px;
+  }
+  ::selection {
+    background: rgb(var(--selected));
+    color: rgb(var(--foreground));
+  }
+  summary {
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  code,
+  pre {
+    @apply font-mono;
+  }
 }
-
-/* ─── Dark theme tokens ──────────────────────────────────────────────── */
-.dark {
-  --color-bg:         #12181B;
-  --color-surface:    #1A2327;
-  --color-border:     #2A353A;
-  --color-text:       #E8EEF0;
-  --color-muted:      #9AABB3;
-  --color-primary:    #5BB5A2;
-  --color-allow:      #7BC48F;
-  --color-allow-bg:   rgba(123,196,143,0.12);
-  --color-deny:       #E5786D;
-  --color-deny-bg:    rgba(229,120,109,0.12);
-  --color-warning:    #E3B35C;
-  --color-warning-bg: rgba(227,179,92,0.12);
+@layer components {
+  .eyebrow {
+    @apply text-xs font-medium uppercase tracking-[0.12em] text-muted;
+  }
+  .technical-block {
+    @apply max-w-full overflow-auto rounded-lg border border-border bg-bg p-4 text-xs leading-relaxed text-muted;
+  }
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-surface focus:px-4 focus:py-3 focus:shadow-panel;
+  }
 }
-
-/* ─── Base ────────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
-
-html { -webkit-text-size-adjust: 100%; }
-
-body {
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
-}
-
-/* ─── Focus rings (keyboard accessibility) ───────────────────────────── */
-:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-/* ─── Scrollbars ─────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-muted);
-}
-
-/* ─── Pulse animation for the failing timeline step ─────────────────── */
-@keyframes failPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(196,87,75,0.4); }
-  60%  { box-shadow: 0 0 0 7px rgba(196,87,75,0); }
-  100% { box-shadow: 0 0 0 0 rgba(196,87,75,0); }
-}
-.dark @keyframes failPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(229,120,109,0.4); }
-  60%  { box-shadow: 0 0 0 7px rgba(229,120,109,0); }
-  100% { box-shadow: 0 0 0 0 rgba(229,120,109,0); }
-}
-.step-fail-pulse { animation: failPulse 1.4s ease-out 1; }
-
-/* ─── Result badge flash ─────────────────────────────────────────────── */
-@keyframes badgeFlash {
-  0%   { opacity: 0; transform: scale(0.92); }
-  60%  { opacity: 1; transform: scale(1.03); }
-  100% { opacity: 1; transform: scale(1); }
-}
-.badge-flash { animation: badgeFlash 0.25s ease-out both; }
-
-/* ─── Respect reduced motion ─────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit --incremental false",
+    "test": "tsc -p tsconfig.tests.json && node --test .test-output/tests/design-system.test.js"
   },
   "dependencies": {
     "@next/swc-win32-x64-msvc": "^14.2.15",

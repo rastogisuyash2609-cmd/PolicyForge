@@ -1,78 +1,76 @@
 import type { Config } from "tailwindcss";
 
-const config: Config = {
+const color = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+
+export default {
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./lib/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./lib/**/*.{ts,tsx}",
   ],
-  // Dark mode controlled via class on <html>
   darkMode: "class",
   theme: {
     extend: {
       colors: {
-        // Semantic tokens – resolved via CSS variables so light/dark swap is free
-        bg:      "var(--color-bg)",
-        surface: "var(--color-surface)",
-        border:  "var(--color-border)",
-        text:    "var(--color-text)",
-        muted:   "var(--color-muted)",
-        primary: "var(--color-primary)",
-        allow:   "var(--color-allow)",
-        "allow-bg": "var(--color-allow-bg)",
-        deny:    "var(--color-deny)",
-        "deny-bg":  "var(--color-deny-bg)",
-        warning: "var(--color-warning)",
-        "warning-bg": "var(--color-warning-bg)",
+        bg: color("background"),
+        surface: color("surface"),
+        raised: color("elevated"),
+        sidebar: color("sidebar"),
+        text: color("foreground"),
+        muted: color("muted"),
+        border: color("border"),
+        primary: color("primary"),
+        "primary-hover": color("primary-hover"),
+        "on-primary": color("on-primary"),
+        secondary: color("secondary"),
+        hover: color("hover"),
+        selected: color("selected"),
+        "selected-text": color("selected-text"),
+        focus: color("focus"),
+        disabled: color("disabled"),
+        "disabled-text": color("disabled-text"),
+        success: color("success"),
+        "success-bg": color("success-bg"),
+        warning: color("warning"),
+        "warning-bg": color("warning-bg"),
+        danger: color("danger"),
+        "danger-bg": color("danger-bg"),
+        info: color("info"),
+        "info-bg": color("info-bg"),
+        // Compatibility aliases for existing screens.
+        allow: color("success"),
+        "allow-bg": color("success-bg"),
+        deny: color("danger"),
+        "deny-bg": color("danger-bg"),
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
-        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        sans: ["var(--font-geist)", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["var(--font-geist-mono)", "ui-monospace", "monospace"],
       },
       fontSize: {
-        // 8px grid scale
-        xs:  ["12px", { lineHeight: "16px" }],
-        sm:  ["14px", { lineHeight: "20px" }],
-        base:["16px", { lineHeight: "24px" }],
-        lg:  ["20px", { lineHeight: "28px" }],
-        xl:  ["24px", { lineHeight: "32px" }],
-        "2xl": ["28px", { lineHeight: "36px" }],
+        "page-title": [
+          "1.875rem",
+          { lineHeight: "1.2", letterSpacing: "-0.035em", fontWeight: "600" },
+        ],
+        "section-title": [
+          "1.125rem",
+          { lineHeight: "1.5", letterSpacing: "-0.02em", fontWeight: "600" },
+        ],
+        "card-title": [
+          "0.9375rem",
+          { lineHeight: "1.5", letterSpacing: "-0.01em", fontWeight: "600" },
+        ],
       },
-      borderRadius: {
-        DEFAULT: "12px",
-        sm: "6px",
-        md: "8px",
-        lg: "12px",
-        xl: "16px",
-        "2xl": "20px",
-      },
+      // Retain the complete Tailwind 4px scale; even increments give an 8px rhythm.
+      maxWidth: { page: "1240px", reading: "72ch" },
+      borderRadius: { DEFAULT: "8px" },
       boxShadow: {
-        card: "0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06)",
-        panel:"0 4px 12px -2px rgb(0 0 0 / 0.10)",
+        card: "0 1px 2px rgb(var(--shadow) / 0.035)",
+        panel: "0 4px 20px -8px rgb(var(--shadow) / 0.12)",
+        subtle: "0 1px 3px rgb(var(--shadow) / 0.05)",
       },
-      spacing: {
-        // 8px grid
-        "1": "8px",
-        "2": "16px",
-        "3": "24px",
-        "4": "32px",
-        "5": "40px",
-        "6": "48px",
-        "7": "56px",
-        "8": "64px",
-      },
-      maxWidth: {
-        page: "1120px",
-      },
-      transitionDuration: {
-        fast: "150ms",
-        base: "200ms",
-        slow: "300ms",
-      },
+      transitionDuration: { fast: "150ms", base: "180ms" },
     },
   },
   plugins: [],
-};
-
-export default config;
+} satisfies Config;

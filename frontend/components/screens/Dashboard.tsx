@@ -19,19 +19,17 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { api, DefaultData, SimulateResponse, SuiteResponse } from "@/lib/api";
 import {
-  translateResolution,
-  translateFindingType,
-  translateEventType,
-  getFindingOneLineSummary,
-  getWhatWentWrong,
+  findingTitle as translateFindingType,
+  eventLabel as translateEventType,
+  findingOneLiner as getFindingOneLineSummary,
+  findingScenarioSentence as getWhatWentWrong,
 } from "@/lib/translate";
 import {
-  staggerListContainerVariants,
-  staggerItemVariants,
-  timelineContainerVariants,
-  timelineItemVariants,
-  panelCrossFadeVariants,
-  useCountUp,
+  listContainer as staggerListContainerVariants,
+  listItem as staggerItemVariants,
+  timelineContainer as timelineContainerVariants,
+  timelineStep as timelineItemVariants,
+  panelVariants as panelCrossFadeVariants,
 } from "@/lib/motion";
 
 interface DashboardProps {
@@ -143,14 +141,14 @@ export function Dashboard({ defaultData, onNavigate }: DashboardProps) {
     return counts;
   }, [findingsList]);
 
-  // Animated Count-Up values for stats (max 500ms)
-  const animatedIssues = useCountUp(findingsList.length);
-  const animatedContradictions = useCountUp(countsByType.contradictions);
-  const animatedGaps = useCountUp(countsByType.gaps);
-  const animatedInvariants = useCountUp(countsByType.invariants);
-  const animatedAmbiguities = useCountUp(countsByType.ambiguities);
-  const animatedRulesCount = useCountUp(defaultData?.rules_v1?.length || 0);
-  const animatedScenariosCount = useCountUp(suiteResult?.total_scenarios || 0);
+  // Display the actual API-derived counts; no missing animation hook is needed.
+  const animatedIssues = findingsList.length;
+  const animatedContradictions = countsByType.contradictions;
+  const animatedGaps = countsByType.gaps;
+  const animatedInvariants = countsByType.invariants;
+  const animatedAmbiguities = countsByType.ambiguities;
+  const animatedRulesCount = defaultData?.rules_v1?.length || 0;
+  const animatedScenariosCount = suiteResult?.total_scenarios || 0;
 
   // If a user selects a sample scenario, check if it maps to any finding
   const handleJourneyChange = (journeyId: string) => {
@@ -303,6 +301,7 @@ export function Dashboard({ defaultData, onNavigate }: DashboardProps) {
                 return (
                   <motion.button
                     key={idx}
+                    aria-pressed={isSelected}
                     variants={staggerItemVariants}
                     onClick={() => setSelectedFindingIndex(idx)}
                     className={`w-full text-left p-3.5 rounded-xl border transition-all duration-150 relative focus-visible:ring-1 focus-visible:ring-primary ${
@@ -372,6 +371,7 @@ export function Dashboard({ defaultData, onNavigate }: DashboardProps) {
 
             <div className="relative">
               <select
+                aria-label="Sample customer journey"
                 value={selectedJourneyId}
                 onChange={(e) => handleJourneyChange(e.target.value)}
                 className="w-full sm:w-auto bg-raised border border-border rounded-lg text-xs font-medium text-text px-3 py-1.5 pr-8 focus-visible:ring-1 focus-visible:ring-primary appearance-none cursor-pointer"
@@ -634,6 +634,8 @@ export function Dashboard({ defaultData, onNavigate }: DashboardProps) {
                 {/* d) Collapsed "Show engine trace" accordion */}
                 <div className="bg-surface rounded-xl border border-border overflow-hidden">
                   <button
+                    aria-expanded={traceOpen}
+                    aria-controls="dashboard-trace"
                     onClick={() => setTraceOpen(!traceOpen)}
                     className="w-full px-5 py-3.5 flex items-center justify-between text-xs font-semibold text-text hover:bg-raised/50 transition-colors duration-150 focus-visible:ring-1 focus-visible:ring-primary"
                   >
@@ -648,7 +650,7 @@ export function Dashboard({ defaultData, onNavigate }: DashboardProps) {
                   </button>
 
                   {traceOpen && (
-                    <div className="p-5 border-t border-border bg-bg/40 space-y-4">
+                    <div id="dashboard-trace" className="p-5 border-t border-border bg-bg/40 space-y-4">
                       {/* Raw trace text */}
                       <div>
                         <div className="text-[11px] font-medium text-muted uppercase tracking-wider mb-1.5">

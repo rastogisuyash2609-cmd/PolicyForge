@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   GitCompare,
   ArrowRight,
@@ -28,14 +28,8 @@ export function PolicyDiff({ defaultData }: PolicyDiffProps) {
   const [error, setError] = useState<string | null>(null);
   const [filterReviewOnly, setFilterReviewOnly] = useState<boolean>(false);
 
-  // Auto-run diff when defaultData is loaded
-  useEffect(() => {
-    if (defaultData?.rules_v1 && defaultData?.rules_v2 && !diffData) {
-      handleRunDiff();
-    }
-  }, [defaultData]);
-
-  const handleRunDiff = async () => {
+  const autoRun = useRef(false);
+  const handleRunDiff = useCallback(async () => {
     if (!defaultData?.rules_v1 || !defaultData?.rules_v2) return;
     setLoading(true);
     setError(null);
@@ -52,7 +46,13 @@ export function PolicyDiff({ defaultData }: PolicyDiffProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [defaultData, suiteType, limit]);
+
+  useEffect(() => {
+    if (!defaultData?.rules_v1 || !defaultData?.rules_v2 || autoRun.current) return;
+    autoRun.current = true;
+    void handleRunDiff();
+  }, [defaultData, handleRunDiff]);
 
   const displayedChanges = diffData?.outcome_changes.filter((c) =>
     filterReviewOnly ? c.needs_review : true

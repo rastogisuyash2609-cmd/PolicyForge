@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Zap,
   ShieldAlert,
@@ -29,14 +29,8 @@ export function StressTest({ defaultData }: StressTestProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedFindingIndex, setSelectedFindingIndex] = useState<number>(0);
 
-  // Auto-run stress test on initial mount
-  useEffect(() => {
-    if (defaultData?.rules_v1 && !suiteData) {
-      handleRunSuite();
-    }
-  }, [defaultData]);
-
-  const handleRunSuite = async () => {
+  const autoRun = useRef(false);
+  const handleRunSuite = useCallback(async () => {
     if (!defaultData?.rules_v1) return;
     setLoading(true);
     setError(null);
@@ -53,7 +47,13 @@ export function StressTest({ defaultData }: StressTestProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [defaultData, suiteType, limit]);
+
+  useEffect(() => {
+    if (!defaultData?.rules_v1 || autoRun.current) return;
+    autoRun.current = true;
+    void handleRunSuite();
+  }, [defaultData, handleRunSuite]);
 
   const selectedFindingItem = suiteData?.findings?.[selectedFindingIndex];
   const finding = selectedFindingItem?.finding;
@@ -101,6 +101,7 @@ export function StressTest({ defaultData }: StressTestProps) {
 
           {/* Scenario Limit */}
           <select
+            aria-label="Scenario limit"
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
             className="bg-slate-950 text-slate-300 text-xs px-3 py-1.5 rounded-xl border border-slate-800 focus:outline-none"
@@ -175,10 +176,12 @@ export function StressTest({ defaultData }: StressTestProps) {
                   const isSelected = selectedFindingIndex === idx;
 
                   return (
-                    <div
+                    <button
                       key={idx}
+                      type="button"
+                      aria-pressed={isSelected}
                       onClick={() => setSelectedFindingIndex(idx)}
-                      className={`p-4 rounded-xl border text-xs cursor-pointer transition-all ${
+                      className={`w-full text-left p-4 rounded-xl border text-xs cursor-pointer transition-all ${
                         isSelected
                           ? "bg-slate-900 border-indigo-500 shadow-md shadow-indigo-600/10"
                           : "bg-slate-950/60 border-slate-800/80 hover:border-slate-700 text-slate-300"
@@ -205,7 +208,7 @@ export function StressTest({ defaultData }: StressTestProps) {
                           </span>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

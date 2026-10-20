@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   FileCode,
   ShieldCheck,
@@ -21,28 +21,15 @@ interface CompilerProps {
 
 export function Compiler({ defaultData }: CompilerProps) {
   const [selectedDoc, setSelectedDoc] = useState<string>("refund_policy.md");
-  const [docContent, setDocContent] = useState<string>("");
+  const docContent = defaultData?.documents[selectedDoc] ?? "";
+  const autoCompiledDocument = useRef<string | null>(null);
   const [compileReport, setCompileReport] = useState<CompileResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [useMock, setUseMock] = useState<boolean>(true);
   const [activeClauseId, setActiveClauseId] = useState<string | null>(null);
 
-  // Initialize with selected document content
-  useEffect(() => {
-    if (defaultData?.documents && defaultData.documents[selectedDoc]) {
-      setDocContent(defaultData.documents[selectedDoc]);
-    }
-  }, [selectedDoc, defaultData]);
-
-  // Initial compilation on load
-  useEffect(() => {
-    if (docContent && !compileReport) {
-      handleCompile();
-    }
-  }, [docContent]);
-
-  const handleCompile = async () => {
+  const handleCompile = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -58,7 +45,15 @@ export function Compiler({ defaultData }: CompilerProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [docContent, selectedDoc, useMock]);
+
+  // Compile each selected document once automatically; manual recompile remains available.
+  useEffect(() => {
+    const key = `${selectedDoc}:${docContent}`;
+    if (!docContent || autoCompiledDocument.current === key) return;
+    autoCompiledDocument.current = key;
+    void handleCompile();
+  }, [docContent, selectedDoc, handleCompile]);
 
   // Split lines into clauses for highlighting
   const rawLines = docContent.split("\n");
@@ -185,10 +180,13 @@ export function Compiler({ defaultData }: CompilerProps) {
               const isSelected = clauseId && activeClauseId === clauseId;
 
               return (
-                <div
+                <button
                   key={idx}
+                  type="button"
+                  aria-pressed={Boolean(isSelected)}
+                  disabled={!clauseId}
                   onClick={() => clauseId && setActiveClauseId(clauseId)}
-                  className={`p-3 rounded-xl border text-xs leading-relaxed transition-all cursor-pointer ${
+                  className={`w-full text-left p-3 rounded-xl border text-xs leading-relaxed transition-all disabled:cursor-default ${
                     isSelected
                       ? "bg-indigo-950/60 border-indigo-500 text-white shadow-md shadow-indigo-600/20"
                       : isUnmapped
@@ -214,7 +212,7 @@ export function Compiler({ defaultData }: CompilerProps) {
                   </div>
 
                   <p>{match ? match[2] : trimmed}</p>
-                </div>
+                </button>
               );
             })}
           </div>

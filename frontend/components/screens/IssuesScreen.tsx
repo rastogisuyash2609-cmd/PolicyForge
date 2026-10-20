@@ -1,723 +1,669 @@
 "use client";
 
-/**
- * IssuesScreen — Stage A
- *
- * Left column: list of problems found by run-suite.
- * Right panel: plain-English description → journey timeline → Rule YES/NO →
- *              "Try it" live simulator → Technical details.
- */
-
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
-  HelpCircle,
-  Info,
-  ShieldAlert,
-  CheckCircle2,
-  RefreshCw,
-  ChevronDown,
-  ChevronUp,
   ArrowRight,
-  ShoppingCart,
-  Package,
-  RotateCcw,
-  XCircle,
-  PackageCheck,
-  CreditCard,
+  CheckCheck,
+  CircleHelp,
+  FileText,
+  FlaskConical,
+  Info,
+  Layers,
   Minus,
+  Play,
   Plus,
+  RefreshCw,
+  ShieldAlert,
+  ShieldCheck,
+  X,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { api, DefaultData, SuiteResponse, SimulateResponse } from "@/lib/api";
+import {
+  api,
+  type DefaultData,
+  type JourneyEvent,
+  type PolicyRule,
+  type SimulateResponse,
+  type SuiteResponse,
+} from "@/lib/api";
 import {
   eventLabel,
-  findingTitle,
   findingOneLiner,
   findingScenarioSentence,
+  findingTitle,
   resolutionBadge,
-  stateChips,
   shrinkSummary,
+  stateChips,
 } from "@/lib/translate";
+import { cn } from "@/lib/utils";
 import {
-  listContainer,
-  listItem,
-  panelVariants,
-  timelineContainer,
-  timelineStep,
-  badgeVariants,
-} from "@/lib/motion";
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Disclosure,
+  EmptyState,
+  LoadingState,
+  SectionHeader,
+  Skeleton,
+} from "@/components/ui/primitives";
 
-interface IssuesScreenProps {
-  defaultData: DefaultData | null;
-}
-
-// ─── Event icons (Lucide) ─────────────────────────────────────────────────
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  ShoppingCart, Package, RotateCcw, RefreshCw, XCircle,
-  PackageCheck, CreditCard, AlertTriangle, CheckCircle2,
+const findingIcons = {
+  CONTRADICTION: AlertTriangle,
+  POLICY_GAP: CircleHelp,
+  AMBIGUITY: Info,
+  INVARIANT_VIOLATION: ShieldAlert,
 };
-
-function EventIcon({ name, className }: { name: string; className?: string }) {
-  const Icon = ICON_MAP[name] ?? Package;
-  return <Icon className={className} />;
+function FindingIcon({ type }: { type: string }) {
+  const Icon = findingIcons[type as keyof typeof findingIcons] ?? Info;
+  return <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />;
 }
-
-// ─── Finding icon ─────────────────────────────────────────────────────────
-function FindingIcon({ type, className }: { type: string; className?: string }) {
-  const icons: Record<string, React.ComponentType<{ className?: string }>> = {
-    CONTRADICTION: AlertTriangle,
-    POLICY_GAP: HelpCircle,
-    AMBIGUITY: Info,
-    INVARIANT_VIOLATION: ShieldAlert,
-  };
-  const Icon = icons[type] ?? AlertTriangle;
-  return <Icon className={className} />;
-}
-
-// ─── Result badge ─────────────────────────────────────────────────────────
-function ResultBadge({ resolution, outcome }: { resolution: string; outcome: string }) {
-  const badge = resolutionBadge(resolution, outcome);
-  const cls =
-    badge.kind === "allow"   ? "bg-allow-bg text-allow border-allow/30" :
-    badge.kind === "deny"    ? "bg-deny-bg text-deny border-deny/30" :
-    badge.kind === "conflict"? "bg-warning-bg text-warning border-warning/30" :
-                               "bg-surface text-muted border-border";
+function Severity({ value }: { value: string }) {
   return (
-    <motion.span
-      key={badge.label}
-      variants={badgeVariants}
-      initial="initial"
-      animate="animate"
-      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border ${cls}`}
+    <Badge
+      tone={
+        value === "CRITICAL" || value === "HIGH"
+          ? "danger"
+          : value === "MEDIUM"
+            ? "warning"
+            : "neutral"
+      }
     >
-      {badge.label}
-    </motion.span>
+      {value.charAt(0) + value.slice(1).toLowerCase()}
+    </Badge>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────
-export function IssuesScreen({ defaultData }: IssuesScreenProps) {
+export function IssuesScreen({
+  defaultData,
+}: {
+  defaultData: DefaultData | null;
+}) {
   const [suite, setSuite] = useState<SuiteResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState(0);
-  const [techOpen, setTechOpen] = useState(false);
+  const [editJourney, setEditJourney] = useState<JourneyEvent[]>([]);
+  const [simResult, setSimResult] = useState<SimulateResponse | null>(null);
+  const [simLoading, setSimLoading] = useState(false);
+  const [simError, setSimError] = useState<string | null>(null);
+  const [activeStep, setActiveStep] = useState<number | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const simulationVersion = useRef(0);
+  const rulesMap = useMemo<Record<string, PolicyRule>>(
+    () =>
+      Object.fromEntries(
+        (defaultData?.rules_v1 ?? []).map((rule) => [rule.id, rule]),
+      ),
+    [defaultData],
+  );
 
-  // rulesMap: rule id → rule object for O(1) lookups
-  const rulesMap = useMemo(() => {
-    const m: Record<string, any> = {};
-    for (const r of defaultData?.rules_v1 ?? []) m[r.id] = r;
-    return m;
-  }, [defaultData]);
-
-  // ── Run suite ────────────────────────────────────────────────────────────
   const runSuite = useCallback(async () => {
-    if (!defaultData?.rules_v1 || !defaultData?.sample_journeys) return;
+    if (!defaultData) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await api.runSuite({
+      const result = await api.runSuite({
         rules: defaultData.rules_v1,
         suite_type: "custom",
         custom_scenarios: defaultData.sample_journeys,
       });
-      setSuite(res);
+      setSuite(result);
       setSelected(0);
-      setTechOpen(false);
-    } catch (e: any) {
-      setError(e.message ?? "Test run failed.");
+    } catch (error: unknown) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "The scenario suite could not be completed.",
+      );
     } finally {
       setLoading(false);
     }
   }, [defaultData]);
+  useEffect(() => {
+    void runSuite();
+  }, [runSuite]);
 
-  useEffect(() => { runSuite(); }, [runSuite]);
-
-  const findings = useMemo(() => suite?.findings ?? [], [suite]);
+  const findings = suite?.findings ?? [];
   const item = findings[selected];
   const finding = item?.finding;
   const shrink = item?.shrink;
-
-  // ── "Try it" state: editable journey + live simulation ──────────────────
-  // Start from the minimal journey for the selected finding
-  const baseJourney = useMemo(
-    () => shrink?.minimal_journey ?? [],
-    [shrink]
-  );
-
-  const [editJourney, setEditJourney] = useState<Array<{ event_type: string; day: number; payload: any }>>([]);
-  const [simResult, setSimResult] = useState<SimulateResponse | null>(null);
-  const [simLoading, setSimLoading] = useState(false);
-
-  // Reset editable journey when selection changes
   useEffect(() => {
-    setEditJourney(baseJourney.map(e => ({ ...e })));
+    simulationVersion.current++;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setEditJourney(
+      (shrink?.minimal_journey ?? []).map((event) => ({
+        ...event,
+        payload: event.payload ?? {},
+      })),
+    );
     setSimResult(null);
-  }, [baseJourney, selected]);
+    setSimError(null);
+    setSimLoading(false);
+    setActiveStep(null);
+  }, [shrink, selected]);
+  useEffect(() => {
+    const version = simulationVersion;
+    const timer = debounceRef;
+    return () => {
+      version.current++;
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
 
-  // Debounced simulate on journey edit
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const simulate = useCallback(
-    (journey: typeof editJourney) => {
-      if (!defaultData?.rules_v1 || journey.length === 0) return;
+    (journey: JourneyEvent[]) => {
+      if (!defaultData || journey.length === 0) return;
+      const version = ++simulationVersion.current;
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      setSimLoading(true);
+      setSimError(null);
+      setSimResult(null);
+      setActiveStep(null);
       debounceRef.current = setTimeout(async () => {
-        setSimLoading(true);
         try {
-          const res = await api.simulate({ rules: defaultData.rules_v1, journey });
-          setSimResult(res);
-        } catch {
-          /* ignore transient errors in try-it */
+          const result = await api.simulate({
+            rules: defaultData.rules_v1,
+            journey,
+          });
+          if (version === simulationVersion.current) setSimResult(result);
+        } catch (error: unknown) {
+          if (version === simulationVersion.current)
+            setSimError(
+              error instanceof Error
+                ? error.message
+                : "The simulation could not be completed.",
+            );
         } finally {
-          setSimLoading(false);
+          if (version === simulationVersion.current) setSimLoading(false);
         }
       }, 300);
     },
-    [defaultData]
+    [defaultData],
   );
 
-  const updateDay = (idx: number, newDay: number) => {
-    const next = editJourney.map((e, i) => i === idx ? { ...e, day: Math.max(0, newDay) } : e);
-    setEditJourney(next);
-    simulate(next);
-  };
+  function updateDay(index: number, day: number) {
+    const journey = editJourney.map((event, i) =>
+      i === index ? { ...event, day: Math.max(0, day) } : event,
+    );
+    setEditJourney(journey);
+    simulate(journey);
+  }
+  function removeStep(index: number) {
+    const journey = editJourney.filter((_, i) => i !== index);
+    setEditJourney(journey);
+    simulate(journey);
+  }
+  // Match the engine's stable chronological order when indexing its trace.
+  const chronologicalJourney = useMemo(
+    () => [...editJourney].sort((a, b) => a.day - b.day),
+    [editJourney],
+  );
+  const stepState =
+    activeStep === null
+      ? null
+      : simResult?.trace.event_traces[activeStep]?.state_after;
+  const lastDecision = simResult?.outcomes
+    .filter((outcome) => outcome.resolution_type !== "NON_DECISION")
+    .at(-1);
+  const lastOutcome = lastDecision ?? simResult?.outcomes.at(-1);
+  const resultBadge = lastOutcome
+    ? resolutionBadge(lastOutcome.resolution_type, lastOutcome.outcome)
+    : null;
+  const relatedRules = (finding?.rule_ids ?? [])
+    .map((id) => rulesMap[id])
+    .filter((rule): rule is PolicyRule => Boolean(rule));
 
-  const removeStep = (idx: number) => {
-    const next = editJourney.filter((_, i) => i !== idx);
-    setEditJourney(next);
-    simulate(next);
-  };
-
-  // Which event in the edit journey had the conflict/issue?
-  const lastDecisionIdx = useMemo(() => {
-    if (!simResult) return editJourney.length - 1;
-    for (let i = simResult.outcomes.length - 1; i >= 0; i--) {
-      if (simResult.outcomes[i].action_applied || simResult.outcomes[i].resolution_type !== "NON_DECISION") {
-        return i;
-      }
-    }
-    return editJourney.length - 1;
-  }, [simResult, editJourney]);
-
-  // State at a given step index
-  const [activeStepIdx, setActiveStepIdx] = useState<number | null>(null);
-
-  const stateAtStep = useMemo(() => {
-    if (activeStepIdx == null || !simResult) return null;
-    // final_state is the state after the whole run; for per-step, use final_state only for last
-    // For non-last steps we parse chips from the trace explanation or just show final_state
-    // (The API doesn't expose per-step state, so we show final_state with a note)
-    return simResult.final_state;
-  }, [activeStepIdx, simResult]);
-
-  // Active step shown in timeline — the failing one by default
-  useEffect(() => {
-    setActiveStepIdx(null);
-  }, [selected]);
-
-  // Last decision in the BASE (shrink) timeline for highlight
-  const failingStepInBase = useMemo(() => {
-    if (!shrink) return -1;
-    const j = shrink.minimal_journey;
-    for (let i = j.length - 1; i >= 0; i--) {
-      if (finding?.event_indices?.includes(i)) return i;
-    }
-    return j.length - 1;
-  }, [shrink, finding]);
-
-  // ── Rendering ────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+      <SectionHeader
+        eyebrow="Deterministic verification"
+        title="Policy issues"
+        description="Find the moments where policy rules disagree, leave a gap, or violate a business constraint."
+        action={
+          <Button variant="secondary" onClick={runSuite} loading={loading}>
+            {!loading && <RefreshCw aria-hidden="true" className="h-4 w-4" />}
+            Re-run tests
+          </Button>
+        }
+      />
 
-      {/* ── Headline ──────────────────────────────────────────────────── */}
-      <div className="bg-surface rounded-xl border border-border p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-card">
-        <div>
-          {loading ? (
-            <div className="space-y-2 animate-pulse">
-              <div className="h-7 w-72 bg-border rounded" />
-              <div className="h-5 w-48 bg-border rounded" />
-            </div>
-          ) : error ? (
-            <p className="text-deny text-base font-medium">{error}</p>
-          ) : (
-            <>
-              <h1 className="text-2xl font-bold text-text leading-tight">
-                {findings.length === 0
-                  ? "No problems found in NovaCart's refund policy"
-                  : `We found ${findings.length} problem${findings.length > 1 ? "s" : ""} in NovaCart's refund policy`}
-              </h1>
-              <p className="text-muted text-base mt-1">
-                Tested on {suite?.total_scenarios ?? 0} customer journeys
+      <Card className="grid grid-cols-3 divide-x divide-border">
+        {[
+          {
+            label: "Unique findings",
+            value: suite?.findings_count,
+            icon: ShieldAlert,
+          },
+          {
+            label: "Journeys tested",
+            value: suite?.total_scenarios,
+            icon: FlaskConical,
+          },
+          {
+            label: "Policy rules",
+            value: defaultData?.rules_v1.length,
+            icon: Layers,
+          },
+        ].map(({ label, value, icon: Icon }) => (
+          <div
+            key={label}
+            className="flex items-center justify-between gap-3 px-3 py-4 sm:px-5"
+          >
+            <div>
+              <p className="min-h-8 text-xs leading-4 text-muted sm:min-h-0">
+                {label}
               </p>
-            </>
-          )}
-        </div>
-
-        <button
-          onClick={runSuite}
-          disabled={loading}
-          className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          Re-run test
-        </button>
-      </div>
-
-      {/* ── Two-column layout ──────────────────────────────────────────── */}
-      {!loading && !error && (
-        <div className="flex gap-6 items-start">
-
-          {/* ── Left: problem list (320px fixed) ──────────────────────── */}
-          <div className="w-80 flex-shrink-0 space-y-2">
-            {findings.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <motion.ul
-                variants={listContainer}
-                initial="initial"
-                animate="animate"
-                className="space-y-2"
-                role="listbox"
-                aria-label="Problems"
-              >
-                {findings.map((item, idx) => {
-                  const f = item.finding;
-                  const active = selected === idx;
-                  return (
-                    <motion.li
-                      key={idx}
-                      variants={listItem}
-                      role="option"
-                      aria-selected={active}
-                    >
-                      <button
-                        onClick={() => { setSelected(idx); setTechOpen(false); }}
-                        className={`
-                          w-full text-left px-4 py-3 rounded-xl border transition-all duration-150
-                          focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary
-                          hover:-translate-y-px
-                          ${active
-                            ? "bg-surface border-primary shadow-card"
-                            : "bg-surface border-border hover:border-primary/40"
-                          }
-                        `}
-                      >
-                        <div className="flex items-center gap-2.5 mb-1">
-                          <FindingIcon
-                            type={f.type}
-                            className={`w-4 h-4 flex-shrink-0 ${
-                              f.type === "CONTRADICTION" ? "text-deny" :
-                              f.type === "POLICY_GAP"    ? "text-warning" :
-                              "text-muted"
-                            }`}
-                          />
-                          <span className="font-semibold text-sm text-text">
-                            {findingTitle(f.type)}
-                          </span>
-                          <span className={`
-                            ml-auto text-xs font-medium px-2 py-0.5 rounded-full border
-                            ${f.severity === "HIGH" || f.severity === "CRITICAL"
-                              ? "text-deny bg-deny-bg border-deny/30"
-                              : "text-warning bg-warning-bg border-warning/30"
-                            }
-                          `}>
-                            {f.severity === "HIGH" ? "High" : f.severity === "CRITICAL" ? "Critical" : "Medium"}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted leading-snug line-clamp-2">
-                          {findingOneLiner(f, rulesMap)}
-                        </p>
-                      </button>
-                    </motion.li>
-                  );
-                })}
-              </motion.ul>
-            )}
+              {loading ? (
+                <Skeleton className="mt-2 h-7 w-8" />
+              ) : (
+                <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
+                  {value ?? "—"}
+                </p>
+              )}
+            </div>
+            <Icon
+              aria-hidden="true"
+              className="hidden h-5 w-5 text-muted sm:block"
+            />
           </div>
+        ))}
+      </Card>
 
-          {/* ── Right: detail panel ───────────────────────────────────── */}
-          <div className="flex-1 min-w-0">
-            <AnimatePresence mode="wait">
-              {finding ? (
-                <motion.div
-                  key={selected}
-                  variants={panelVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  className="space-y-5"
-                >
-                  {/* a) Plain-English scenario sentence */}
-                  <div className="bg-surface rounded-xl border border-border p-5 shadow-card">
-                    <p className="text-base text-text leading-relaxed">
-                      {findingScenarioSentence(finding, rulesMap)}
+      {loading ? (
+        <Card className="space-y-5 p-6">
+          <LoadingState label="Running journeys and reducing counterexamples…" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </Card>
+      ) : error ? (
+        <Alert title="Unable to run the policy tests">{error}</Alert>
+      ) : findings.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={
+              <CheckCheck aria-hidden="true" className="h-5 w-5 text-success" />
+            }
+            title="No findings in this suite"
+            description={`The engine found no supported issues across ${suite?.total_scenarios ?? 0} tested journeys. Other journeys and unmapped clauses may still need review.`}
+          />
+        </Card>
+      ) : (
+        <div className="grid items-start gap-5 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[304px_minmax(0,1fr)]">
+          <aside
+            aria-label="Findings"
+            className="min-w-0 space-y-3 lg:sticky lg:top-6"
+          >
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-sm font-medium">Findings</h2>
+              <span className="text-xs text-muted">
+                {findings.length} to review
+              </span>
+            </div>
+            <ul className="space-y-2">
+              {findings.map((entry, index) => (
+                <li key={JSON.stringify(entry.signature)}>
+                  <button
+                    type="button"
+                    aria-pressed={selected === index}
+                    aria-controls="finding-detail"
+                    onClick={() => setSelected(index)}
+                    className={cn(
+                      "w-full rounded-xl border p-4 text-left transition-colors duration-fast",
+                      selected === index
+                        ? "border-primary/40 bg-selected shadow-card"
+                        : "border-border bg-surface hover:bg-bg",
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={
+                          entry.finding.type === "POLICY_GAP"
+                            ? "text-warning"
+                            : "text-danger"
+                        }
+                      >
+                        <FindingIcon type={entry.finding.type} />
+                      </span>
+                      <Severity value={entry.finding.severity} />
+                    </div>
+                    <h3 className="mt-3 text-card-title">
+                      {findingTitle(entry.finding.type)}
+                    </h3>
+                    <p
+                      className={cn(
+                        "mt-1.5 text-sm leading-6",
+                        selected === index ? "text-text/80" : "text-muted",
+                      )}
+                    >
+                      {findingOneLiner(entry.finding, rulesMap)}
                     </p>
+                    <span
+                      className={cn(
+                        "mt-4 flex items-center gap-1.5 text-xs font-medium",
+                        selected === index
+                          ? "text-selected-text"
+                          : "text-muted",
+                      )}
+                    >
+                      {selected === index
+                        ? "Reviewing finding"
+                        : "View finding"}
+                      <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <p className="px-1 pt-2 text-xs leading-5 text-muted">
+              Findings are verified by Python simulation. This demonstration
+              uses predefined customer journeys.
+            </p>
+          </aside>
+
+          {finding && (
+            <div
+              id="finding-detail"
+              role="region"
+              aria-labelledby="finding-title"
+              className="min-w-0 space-y-4"
+            >
+              <Card className="overflow-hidden">
+                <div className="border-b border-border p-5 sm:p-6">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <Badge tone="primary">
+                      <ShieldCheck aria-hidden="true" className="h-3 w-3" />
+                      Engine verified
+                    </Badge>
+                    <Severity value={finding.severity} />
+                  </div>
+                  <h2 id="finding-title" className="text-section-title">
+                    {findingTitle(finding.type)}
+                  </h2>
+                  <p className="mt-2 max-w-reading text-sm leading-7 text-muted">
+                    {findingScenarioSentence(finding, rulesMap)}
+                  </p>
+                </div>
+                <div className="p-5 sm:p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-sm font-medium">
+                      Reproduction journey
+                    </h3>
                     {shrink && (
-                      <p className="text-sm text-muted mt-2">
-                        {shrinkSummary(shrink)}
-                      </p>
+                      <span className="text-xs text-muted">
+                        {editJourney.length}{" "}
+                        {editJourney.length === 1 ? "step" : "steps"}
+                      </span>
                     )}
                   </div>
-
-                  {/* b) Journey timeline (uses minimal/shrunk journey) */}
-                  {shrink && (
-                    <div className="bg-surface rounded-xl border border-border p-5 shadow-card">
-                      <h2 className="text-sm font-semibold text-muted mb-4 uppercase tracking-wide">
-                        Customer journey
-                      </h2>
-                      <div className="overflow-x-auto pb-2">
-                        <motion.div
-                          variants={timelineContainer}
-                          initial="initial"
-                          animate="animate"
-                          className="flex items-start gap-2 min-w-max"
-                        >
-                          {shrink.minimal_journey.map((ev, idx) => {
-                            const isFailing = idx === failingStepInBase || idx === shrink.minimal_journey.length - 1;
-                            const isActive = activeStepIdx === idx;
-                            return (
-                              <React.Fragment key={idx}>
-                                <motion.button
-                                  variants={timelineStep}
-                                  onClick={() => setActiveStepIdx(isActive ? null : idx)}
-                                  className={`
-                                    flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl border
-                                    min-w-[100px] text-center transition-all duration-150
-                                    focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary
-                                    ${isFailing
-                                      ? `bg-deny-bg border-deny/60 ${isActive ? "" : "step-fail-pulse"}`
-                                      : isActive
-                                        ? "bg-primary/10 border-primary"
-                                        : "bg-bg border-border hover:border-primary/40"
-                                    }
-                                  `}
-                                >
-                                  <span className={`text-xs font-mono ${isFailing ? "text-deny" : "text-muted"}`}>
-                                    Day {ev.day}
-                                  </span>
-                                  <span className={`text-xs font-medium leading-tight ${isFailing ? "text-deny" : "text-text"}`}>
-                                    {eventLabel(ev.event_type)}
-                                  </span>
-                                </motion.button>
-                                {idx < shrink.minimal_journey.length - 1 && (
-                                  <ArrowRight className="w-4 h-4 text-muted self-center flex-shrink-0" />
+                  {shrink ? (
+                    <>
+                      <p className="mt-1 text-xs leading-5 text-muted">
+                        {shrinkSummary(shrink)}
+                      </p>
+                      <div
+                        role="region"
+                        aria-label="Journey timeline; scroll horizontally"
+                        tabIndex={0}
+                        className="mt-5 overflow-x-auto rounded-lg pb-2"
+                      >
+                        <ol className="flex min-w-max items-center gap-2 px-1 py-1">
+                          {chronologicalJourney.map((event, index) => (
+                            <li key={index} className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                aria-pressed={activeStep === index}
+                                onClick={() =>
+                                  setActiveStep(
+                                    activeStep === index ? null : index,
+                                  )
+                                }
+                                className={cn(
+                                  "min-h-20 w-32 rounded-lg border px-3 py-3 text-left transition-colors duration-fast",
+                                  activeStep === index
+                                    ? "border-primary bg-selected"
+                                    : "border-border bg-bg hover:border-muted/50",
                                 )}
-                              </React.Fragment>
-                            );
-                          })}
-                        </motion.div>
-                      </div>
-
-                      {/* State chips on step click (shows final_state) */}
-                      <AnimatePresence>
-                        {activeStepIdx !== null && simResult && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.18 }}
-                            className="mt-4 pt-4 border-t border-border"
-                          >
-                            <p className="text-xs text-muted mb-2">State at this point:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {stateChips(simResult.final_state).length === 0 ? (
-                                <span className="text-xs text-muted">No notable state changes.</span>
-                              ) : (
-                                stateChips(simResult.final_state).map(chip => (
-                                  <span
-                                    key={chip}
-                                    className="text-xs px-2.5 py-1 rounded-full bg-bg border border-border text-text"
-                                  >
-                                    {chip}
-                                  </span>
-                                ))
+                              >
+                                <span
+                                  className={cn(
+                                    "text-xs font-medium",
+                                    activeStep === index
+                                      ? "text-text/80"
+                                      : "text-muted",
+                                  )}
+                                >
+                                  Day {event.day}
+                                </span>
+                                <span className="mt-1.5 block text-sm font-medium leading-5">
+                                  {eventLabel(event.event_type)}
+                                </span>
+                              </button>
+                              {index < chronologicalJourney.length - 1 && (
+                                <ArrowRight
+                                  aria-hidden="true"
+                                  className="h-3.5 w-3.5 text-muted"
+                                />
                               )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )}
-
-                  {/* c) Rule YES / Rule NO cards */}
-                  {finding.type === "CONTRADICTION" && finding.rule_ids && finding.rule_ids.length >= 2 && (
-                    <div>
-                      <h2 className="text-sm font-semibold text-muted mb-3 uppercase tracking-wide px-1">
-                        Why they disagree
-                      </h2>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {/* ALLOW rule */}
-                        {(() => {
-                          const allowId = finding.details?.allow_rules?.[0] ?? finding.rule_ids[0];
-                          const rule = rulesMap[allowId];
-                          return (
-                            <RuleCard
-                              label="Rule says YES"
-                              effect="allow"
-                              name={rule?.name ?? allowId}
-                              sentence={rule?.source?.verbatim_sentence}
-                              ruleId={allowId}
-                            />
-                          );
-                        })()}
-                        {/* DENY rule */}
-                        {(() => {
-                          const denyId = finding.details?.deny_rules?.[0] ?? finding.rule_ids[1];
-                          const rule = rulesMap[denyId];
-                          return (
-                            <RuleCard
-                              label="Rule says NO"
-                              effect="deny"
-                              name={rule?.name ?? denyId}
-                              sentence={rule?.source?.verbatim_sentence}
-                              ruleId={denyId}
-                            />
-                          );
-                        })()}
+                            </li>
+                          ))}
+                        </ol>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Policy gap: no rule at all */}
-                  {finding.type === "POLICY_GAP" && (
-                    <div>
-                      <h2 className="text-sm font-semibold text-muted mb-3 uppercase tracking-wide px-1">
-                        What's missing
-                      </h2>
-                      <div className="bg-warning-bg border border-warning/40 rounded-xl p-5">
-                        <p className="text-base text-warning font-medium">
-                          No policy clause covers this event
-                        </p>
-                        <p className="text-sm text-muted mt-2">
-                          The policy needs a rule that explicitly says what should happen when a customer submits{" "}
-                          <strong className="text-text">{eventLabel(finding.details?.event_type ?? "")}</strong>{" "}
-                          in this order state.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* d) "Try it" controls */}
-                  {editJourney.length > 0 && (
-                    <TryItPanel
-                      journey={editJourney}
-                      simResult={simResult}
-                      simLoading={simLoading}
-                      lastDecisionIdx={lastDecisionIdx}
-                      onUpdateDay={updateDay}
-                      onRemoveStep={removeStep}
-                    />
-                  )}
-
-                  {/* e) Technical details accordion */}
-                  <div className="bg-surface rounded-xl border border-border overflow-hidden shadow-card">
-                    <button
-                      onClick={() => setTechOpen(o => !o)}
-                      className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-muted hover:text-text hover:bg-bg/50 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                    >
-                      Technical details
-                      {techOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
-                    <AnimatePresence>
-                      {techOpen && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="border-t border-border px-5 py-4 space-y-4">
-                            <div>
-                              <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Finding type</p>
-                              <code className="text-sm font-mono text-text">{finding.type}</code>
-                            </div>
-                            {finding.rule_ids && finding.rule_ids.length > 0 && (
-                              <div>
-                                <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Rule IDs</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {finding.rule_ids.map(id => (
-                                    <code key={id} className="text-xs font-mono px-2 py-1 bg-bg border border-border rounded text-primary">
-                                      {id}
-                                    </code>
-                                  ))}
-                                </div>
+                      {activeStep !== null && (
+                        <div className="mt-3 rounded-lg border border-border bg-bg p-3 text-xs text-muted">
+                          {stepState ? (
+                            <>
+                              <p className="mb-2 font-medium text-text">
+                                State after{" "}
+                                {eventLabel(
+                                  chronologicalJourney[activeStep].event_type,
+                                ).toLowerCase()}
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {stateChips(stepState).map((chip) => (
+                                  <Badge key={chip}>{chip}</Badge>
+                                ))}
                               </div>
-                            )}
-                            <div>
-                              <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Engine trace</p>
-                              <pre className="text-xs font-mono text-muted bg-bg border border-border rounded-lg p-3 whitespace-pre-wrap leading-relaxed">
-                                {finding.trace}
-                              </pre>
-                            </div>
-                            {simResult?.final_state && (
-                              <div>
-                                <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Final state</p>
-                                <pre className="text-xs font-mono text-muted bg-bg border border-border rounded-lg p-3 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">
-                                  {JSON.stringify(simResult.final_state, null, 2)}
-                                </pre>
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
+                            </>
+                          ) : (
+                            "Run the simulation below to inspect the state at this step."
+                          )}
+                        </div>
                       )}
-                    </AnimatePresence>
-                  </div>
+                    </>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted">
+                      A reduced journey was not returned. The original finding
+                      remains available in technical details.
+                    </p>
+                  )}
+                </div>
+              </Card>
 
-                </motion.div>
-              ) : (
-                findings.length === 0 ? null : (
-                  <div className="bg-surface rounded-xl border border-border p-12 text-center text-muted">
-                    Select a problem on the left to inspect it.
+              {relatedRules.length > 0 && (
+                <section aria-labelledby="rules-involved" className="space-y-3">
+                  <h3 id="rules-involved" className="px-1 text-sm font-medium">
+                    Rules involved
+                  </h3>
+                  <div className="grid items-start gap-3 sm:grid-cols-2">
+                    {relatedRules.map((rule) => (
+                      <Card key={rule.id} className="p-5">
+                        <Badge
+                          tone={rule.effect === "ALLOW" ? "success" : "danger"}
+                        >
+                          {rule.effect === "ALLOW"
+                            ? "Allows the request"
+                            : "Denies the request"}
+                        </Badge>
+                        <h4 className="mt-3 text-card-title">{rule.name}</h4>
+                        <blockquote className="mt-2 text-sm leading-7 text-muted">
+                          &ldquo;{rule.source.verbatim_sentence}&rdquo;
+                        </blockquote>
+                        <p className="mt-4 flex items-start gap-1.5 text-xs text-muted">
+                          <FileText
+                            aria-hidden="true"
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                          />
+                          <span>{rule.source.doc_name}</span>
+                        </p>
+                      </Card>
+                    ))}
                   </div>
-                )
+                </section>
               )}
-            </AnimatePresence>
-          </div>
+
+              {editJourney.length > 0 && (
+                <Card className="p-5 sm:p-6">
+                  <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-medium">
+                        Try a different journey
+                      </h3>
+                      <p className="mt-1 text-xs leading-5 text-muted">
+                        Change a day or remove a step. The engine recalculates
+                        the result.
+                      </p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      loading={simLoading}
+                      onClick={() => simulate(editJourney)}
+                    >
+                      {!simLoading && (
+                        <Play aria-hidden="true" className="h-3.5 w-3.5" />
+                      )}
+                      Run simulation
+                    </Button>
+                  </div>
+                  <ul className="space-y-2">
+                    {editJourney.map((event, index) => (
+                      <li
+                        key={index}
+                        className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border border-border bg-bg px-3 py-2"
+                      >
+                        <span className="min-w-0 text-sm font-medium">
+                          {eventLabel(event.event_type)}
+                        </span>
+                        <div className="ml-auto flex shrink-0 items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 min-h-9 w-9"
+                            aria-label={`Decrease day for ${eventLabel(event.event_type).toLowerCase()}`}
+                            disabled={event.day === 0}
+                            onClick={() => updateDay(index, event.day - 1)}
+                          >
+                            <Minus aria-hidden="true" className="h-3.5 w-3.5" />
+                          </Button>
+                          <span className="w-14 text-center font-mono text-xs tabular-nums">
+                            Day {event.day}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 min-h-9 w-9"
+                            aria-label={`Increase day for ${eventLabel(event.event_type).toLowerCase()}`}
+                            onClick={() => updateDay(index, event.day + 1)}
+                          >
+                            <Plus aria-hidden="true" className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="ml-1 h-9 min-h-9 w-9 hover:text-danger"
+                            disabled={editJourney.length <= 1}
+                            aria-label={`Remove ${eventLabel(event.event_type).toLowerCase()}`}
+                            onClick={() => removeStep(index)}
+                          >
+                            <X aria-hidden="true" className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                    className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4"
+                  >
+                    <span className="text-sm text-muted">
+                      Simulation result
+                    </span>
+                    {simLoading ? (
+                      <span className="text-sm text-muted">Simulating…</span>
+                    ) : resultBadge ? (
+                      <Badge
+                        tone={
+                          resultBadge.kind === "allow"
+                            ? "success"
+                            : resultBadge.kind === "deny"
+                              ? "danger"
+                              : resultBadge.kind === "conflict"
+                                ? "warning"
+                                : "neutral"
+                        }
+                      >
+                        {resultBadge.label}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted">
+                        Ready to simulate
+                      </span>
+                    )}
+                  </div>
+                  {simError && (
+                    <Alert title="Simulation failed" className="mt-4">
+                      {simError}
+                    </Alert>
+                  )}
+                </Card>
+              )}
+
+              <Disclosure
+                key={`${selected}-${JSON.stringify(item.signature)}`}
+                title="Technical details"
+              >
+                <dl className="mb-4 space-y-3 text-sm">
+                  <div>
+                    <dt className="mb-1 text-xs text-muted">Finding type</dt>
+                    <dd className="break-all font-mono text-xs">
+                      {finding.type}
+                    </dd>
+                  </div>
+                  {finding.rule_ids.length > 0 && (
+                    <div>
+                      <dt className="mb-1 text-xs text-muted">
+                        Rule identifiers
+                      </dt>
+                      <dd className="break-all font-mono text-xs leading-6">
+                        {finding.rule_ids.join(", ")}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+                <p className="mb-2 text-xs font-medium">
+                  Suite finding trace · original journey
+                </p>
+                <pre className="technical-block whitespace-pre-wrap break-words">
+                  {finding.trace}
+                </pre>
+                {simResult && (
+                  <>
+                    <p className="mb-2 mt-4 text-xs font-medium">
+                      Simulation final state
+                    </p>
+                    <pre className="technical-block max-h-72">
+                      {JSON.stringify(simResult.final_state, null, 2)}
+                    </pre>
+                  </>
+                )}
+              </Disclosure>
+            </div>
+          )}
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── Rule card (YES / NO) ─────────────────────────────────────────────────
-function RuleCard({
-  label, effect, name, sentence, ruleId,
-}: {
-  label: string;
-  effect: "allow" | "deny";
-  name: string;
-  sentence?: string;
-  ruleId: string;
-}) {
-  const bg   = effect === "allow" ? "bg-allow-bg border-allow/40" : "bg-deny-bg border-deny/40";
-  const head = effect === "allow" ? "text-allow" : "text-deny";
-
-  return (
-    <div className={`rounded-xl border p-5 space-y-3 ${bg}`}>
-      <div className="flex items-center justify-between">
-        <span className={`text-sm font-bold uppercase tracking-wide ${head}`}>{label}</span>
-      </div>
-      <p className="text-base font-semibold text-text leading-snug">{name}</p>
-      {sentence && (
-        <blockquote className="border-l-2 border-current pl-3 text-sm text-muted italic leading-relaxed">
-          &ldquo;{sentence}&rdquo;
-        </blockquote>
-      )}
-    </div>
-  );
-}
-
-// ─── "Try it" panel ───────────────────────────────────────────────────────
-function TryItPanel({
-  journey,
-  simResult,
-  simLoading,
-  lastDecisionIdx,
-  onUpdateDay,
-  onRemoveStep,
-}: {
-  journey: Array<{ event_type: string; day: number; payload: any }>;
-  simResult: SimulateResponse | null;
-  simLoading: boolean;
-  lastDecisionIdx: number;
-  onUpdateDay: (idx: number, day: number) => void;
-  onRemoveStep: (idx: number) => void;
-}) {
-  const lastOutcome = simResult?.outcomes?.[lastDecisionIdx] ?? simResult?.outcomes?.at(-1);
-
-  return (
-    <div className="bg-surface rounded-xl border border-border p-5 shadow-card space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-muted uppercase tracking-wide">Try it</h2>
-        <p className="text-xs text-muted">Edit the journey — result updates instantly</p>
-      </div>
-
-      {/* Editable steps */}
-      <div className="space-y-2">
-        {journey.map((ev, idx) => {
-          const isLast = idx === journey.length - 1;
-          return (
-            <div
-              key={idx}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border ${
-                isLast ? "bg-deny-bg border-deny/40" : "bg-bg border-border"
-              }`}
-            >
-              <span className="text-sm text-text flex-1 min-w-0 truncate">
-                {eventLabel(ev.event_type)}
-              </span>
-
-              {/* Day stepper */}
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => onUpdateDay(idx, ev.day - 1)}
-                  className="w-7 h-7 flex items-center justify-center rounded border border-border bg-surface hover:bg-bg text-muted hover:text-text transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                  aria-label="Decrease day"
-                >
-                  <Minus className="w-3 h-3" />
-                </button>
-                <span className="text-sm font-mono text-text w-14 text-center">
-                  Day {ev.day}
-                </span>
-                <button
-                  onClick={() => onUpdateDay(idx, ev.day + 1)}
-                  className="w-7 h-7 flex items-center justify-center rounded border border-border bg-surface hover:bg-bg text-muted hover:text-text transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                  aria-label="Increase day"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
-              </div>
-
-              {/* Remove */}
-              {journey.length > 1 && (
-                <button
-                  onClick={() => onRemoveStep(idx)}
-                  className="text-muted hover:text-deny transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded"
-                  aria-label={`Remove ${eventLabel(ev.event_type)}`}
-                >
-                  <XCircle className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Live result badge */}
-      <div className="flex items-center gap-3 pt-2 border-t border-border">
-        <span className="text-sm text-muted">Result:</span>
-        {simLoading ? (
-          <span className="text-sm text-muted animate-pulse">Simulating…</span>
-        ) : lastOutcome ? (
-          <ResultBadge
-            resolution={lastOutcome.resolution_type}
-            outcome={lastOutcome.outcome}
-          />
-        ) : (
-          <span className="text-sm text-muted">Run the simulation first</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Empty state ──────────────────────────────────────────────────────────
-function EmptyState() {
-  return (
-    <div className="bg-surface rounded-xl border border-border p-8 text-center space-y-3 shadow-card">
-      <CheckCircle2 className="w-8 h-8 text-allow mx-auto" />
-      <h3 className="text-base font-semibold text-text">No problems found</h3>
-      <p className="text-sm text-muted leading-relaxed">
-        NovaCart's refund policy is consistent across all tested journeys.
-      </p>
     </div>
   );
 }

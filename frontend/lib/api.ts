@@ -4,10 +4,29 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+export interface JourneyEvent {
+  event_type: string;
+  day: number;
+  payload?: Record<string, unknown>;
+}
+
+export interface PolicyRule {
+  id: string;
+  name: string;
+  decision: "REFUND" | "REPLACEMENT";
+  trigger: string;
+  when: Record<string, unknown>;
+  effect: "ALLOW" | "DENY";
+  priority: number;
+  overrides: string[];
+  source: { doc_name: string; verbatim_sentence: string };
+  state_updates?: Record<string, unknown> | null;
+}
+
 export interface DefaultData {
   documents: Record<string, string>;
-  rules_v1: any[];
-  rules_v2: any[];
+  rules_v1: PolicyRule[];
+  rules_v2: PolicyRule[];
   sample_journeys: Array<{
     id: string;
     name: string;
@@ -70,6 +89,8 @@ export interface SimulateResponse {
       resolution_type: string;
       outcome: string;
       explanation: string;
+      state_before: Record<string, unknown>;
+      state_after: Record<string, unknown>;
     }>;
   };
   findings: any[];
@@ -98,7 +119,7 @@ export interface SuiteResponse {
       minimal_length: number;
       engine_runs: number;
       reduction_pct: number;
-    };
+    } | null;
   }>;
   summary_table: string;
 }
