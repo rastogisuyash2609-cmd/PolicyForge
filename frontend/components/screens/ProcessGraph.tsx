@@ -114,7 +114,7 @@ export function ProcessGraph({ defaultData }: ProcessGraphProps) {
       <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800">
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
           <Workflow className="w-5 h-5 text-indigo-400" />
-          Interactive Policy Process Graph
+          Illustrative Policy Process Graph · not a runtime trace
         </h1>
         <p className="text-xs text-slate-400 mt-1">
           Visual architecture of the NovaCart customer order lifecycle, decision nodes, conflict resolution stages, and invariant guardrails.

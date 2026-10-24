@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { api, type DefaultData, type DiffResponse } from "./api";
 import type { ActivePolicy } from "./policy-domain";
 import {
@@ -18,12 +18,9 @@ export function usePolicyComparison(
 ) {
   const [input, setInput] = useState(emptyComparison);
   const [snapshot, setSnapshot] = useState<RuleSnapshot | null>(null);
-  const prepared = buildComparison(
-    input,
-    data,
-    snapshot,
-    scenarioJson,
-    scenarioName,
+  const prepared = useMemo(
+    () => buildComparison(input, data, snapshot, scenarioJson, scenarioName),
+    [input, data, snapshot, scenarioJson, scenarioName],
   );
   const key = JSON.stringify(prepared ?? { input, snapshot });
   const channel = useRef(new LatestRequest());

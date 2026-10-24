@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
-import type { PolicyRule, SimulateResponse } from "../../lib/api";
+import { useId, useState } from "react";
+import type { PolicyRule, SimulateResponse, JourneyEvent } from "../../lib/api";
+import { executionJourney } from "../../lib/execution";
 import { eventLabel, findingTitle, resolutionBadge } from "../../lib/translate";
 import { Badge, Card, Disclosure } from "../ui/primitives";
 
@@ -9,22 +10,30 @@ export function SimulationResults({
   policyName,
   scenarioName,
   rules,
+  journey = [],
 }: {
   result: SimulateResponse;
   policyName: string;
   scenarioName: string;
   rules: PolicyRule[];
+  journey?: JourneyEvent[];
 }) {
   const [step, setStep] = useState(0);
+  const instance = useId();
+  const headingId = `simulation-heading-${instance}`;
+  const inspectionId = `event-inspection-${instance}`;
   const trace = result.trace.event_traces[step];
+  const inputEvent = trace
+    ? executionJourney(journey)[trace.event_index]
+    : undefined;
   const names = (ids: string[]) =>
     ids.map((id) => rules.find((r) => r.id === id)?.name ?? id).join(", ") ||
     "None";
   return (
-    <section aria-labelledby="simulation-heading" className="space-y-5">
+    <section aria-labelledby={headingId} className="space-y-5">
       <div>
         <p className="eyebrow">Deterministic execution</p>
-        <h2 id="simulation-heading" className="mt-2 text-section-title">
+        <h2 id={headingId} className="mt-2 text-section-title">
           Simulation results
         </h2>
         <p className="mt-1 break-words text-sm text-muted">
@@ -120,7 +129,7 @@ export function SimulationResults({
                 <button
                   type="button"
                   aria-pressed={step === index}
-                  aria-controls="event-inspection"
+                  aria-controls={inspectionId}
                   onClick={() => setStep(index)}
                   className={`min-h-11 rounded-lg border px-4 py-3 text-left text-xs ${step === index ? "border-primary bg-selected text-selected-text" : "border-border bg-bg"}`}
                 >
@@ -137,13 +146,36 @@ export function SimulationResults({
         </div>
         {trace && (
           <div
-            id="event-inspection"
+            id={inspectionId}
             className="mt-4 space-y-4 border-t border-border pt-4"
           >
             <p className="text-sm font-medium">
               Step {step + 1}: {eventLabel(trace.event_type)}
             </p>
             <p className="text-sm leading-7 text-muted">{trace.explanation}</p>
+            <p className="text-xs text-muted">
+              Day {trace.day} · execution index {trace.event_index}
+              {inputEvent &&
+                ` · input event ${inputEvent.inputIndex + 1}`} ·{" "}
+              {trace.is_decision_event
+                ? `${trace.outcome} / ${trace.resolution_type}`
+                : "Non-decision event"}
+            </p>
+            <div className="rounded-lg border border-border bg-bg p-3">
+              <h4 className="text-xs font-medium">Event payload</h4>
+              <p className="mt-2 break-words font-mono text-xs text-muted">
+                {inputEvent
+                  ? JSON.stringify(inputEvent.event.payload ?? {})
+                  : "Input payload unavailable in this result view."}
+              </p>
+            </div>
+            <p className="text-xs leading-6 text-muted">
+              Evaluated rules: {names(trace.rules_evaluated)}. Event findings:{" "}
+              {trace.findings
+                .map((f) => `${findingTitle(f.type)} (${f.severity})`)
+                .join(", ") || "None"}
+              .
+            </p>
             <dl className="space-y-2 text-sm">
               <div>
                 <dt className="text-xs text-muted">Rules fired</dt>
@@ -202,6 +234,13 @@ export function SimulationResults({
                 {rules.find((r) => r.id === evaluation.rule_id)?.source
                   .verbatim_sentence && (
                   <blockquote className="mt-3 border-l-2 border-border pl-3 text-sm text-muted">
+                    <cite className="mb-1 block break-words text-xs not-italic">
+                      {evaluation.rule_id} ·{" "}
+                      {
+                        rules.find((r) => r.id === evaluation.rule_id)?.source
+                          .doc_name
+                      }
+                    </cite>
                     {
                       rules.find((r) => r.id === evaluation.rule_id)?.source
                         .verbatim_sentence

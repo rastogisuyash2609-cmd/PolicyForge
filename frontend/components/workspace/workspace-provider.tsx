@@ -14,6 +14,7 @@ import { api, type DefaultData } from "@/lib/api";
 import { useIssuesAnalysis } from "@/lib/use-issues-analysis";
 import { usePolicyComparison } from "@/lib/use-policy-comparison";
 import { usePolicySimulation } from "@/lib/use-policy-simulation";
+import { useStressTest } from "@/lib/use-stress-test";
 import {
   activateDraft,
   demoDraft,
@@ -44,6 +45,8 @@ type WorkspaceState = {
   issues: ReturnType<typeof useIssuesAnalysis>;
   simulation: ReturnType<typeof usePolicySimulation>;
   comparison: ReturnType<typeof usePolicyComparison>;
+  stress: ReturnType<typeof useStressTest>;
+  scenarios: Scenario[];
 };
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
 
@@ -151,7 +154,10 @@ function AnalysisSession({
   scenarios,
   children,
 }: {
-  workspace: Omit<WorkspaceState, "issues" | "simulation" | "comparison">;
+  workspace: Omit<
+    WorkspaceState,
+    "issues" | "simulation" | "comparison" | "stress" | "scenarios"
+  >;
   scenarios: Scenario[];
   children: React.ReactNode;
 }) {
@@ -159,7 +165,7 @@ function AnalysisSession({
   const issues = useIssuesAnalysis(
     workspace.active,
     scenarios,
-    pathname === "/workspace/issues",
+    pathname === "/workspace/issues" || pathname === "/workspace",
   );
   const simulation = usePolicySimulation(
     workspace.active,
@@ -171,9 +177,17 @@ function AnalysisSession({
     workspace.scenarioJson,
     workspace.scenarioName,
   );
+  const stress = useStressTest(workspace.active, scenarios);
   return (
     <WorkspaceContext.Provider
-      value={{ ...workspace, issues, simulation, comparison }}
+      value={{
+        ...workspace,
+        issues,
+        simulation,
+        comparison,
+        stress,
+        scenarios,
+      }}
     >
       {children}
     </WorkspaceContext.Provider>

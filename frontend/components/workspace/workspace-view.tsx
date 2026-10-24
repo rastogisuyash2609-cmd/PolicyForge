@@ -6,12 +6,20 @@ import { AnalyzeScreen } from "@/components/screens/AnalyzeScreen";
 import { IssuesScreen } from "@/components/screens/IssuesScreen";
 import { PoliciesScreen } from "@/components/screens/PoliciesScreen";
 import { WhatIfScreen } from "@/components/screens/WhatIfScreen";
+import { StressTest } from "@/components/screens/StressTest";
+import { ReportsScreen } from "@/components/screens/ReportsScreen";
 import { useWorkspace } from "./workspace-provider";
 
 export function WorkspaceView({
   view,
 }: {
-  view: "issues" | "policies" | "what-if" | "analyze";
+  view:
+    | "issues"
+    | "policies"
+    | "what-if"
+    | "analyze"
+    | "stress-test"
+    | "reports";
 }) {
   const { defaultData, loading, error, retry } = useWorkspace();
   if (loading)
@@ -41,6 +49,8 @@ export function WorkspaceView({
       </Card>
     );
   if (view === "what-if") return <WhatIfScreen />;
+  if (view === "stress-test") return <StressTest />;
+  if (view === "reports") return <ReportsScreen />;
   if (view === "analyze") return <AnalyzeScreen />;
   return view === "issues" ? <IssuesScreen /> : <PoliciesScreen />;
 }

@@ -1,5 +1,35 @@
 # Phase 5 backend-owner coordination
 
+## Phase 6 status and priority (2026-10-25)
+
+No backend algorithm, schema or fixture was changed. The detailed numbered
+entries below retain reproductions, affected code, expected/actual behavior,
+proposed coordinated fixes and required regression tests. Phase 6 real API tests
+verify the supported paths; they do not establish that these defects are fixed.
+
+| Issue | Severity | Current impact / status | Owner handoff |
+| --- | --- | --- | --- |
+| 9 Finding identity | High | Distinct invariants may merge in suite counts, shrink targets and diff deltas | Stable invariant discriminator across detectors/signature/suite/shrink/diff; multi-invariant regression |
+| 1 Input coercion | High | Other API clients can silently change payload meaning; frontend guarded | Strict typed payload/day validation; negative day/false string/unknown key regressions |
+| 5 Rule identity | High | Duplicate IDs affect traces/maps/diff; frontend guarded | Shared rule-set validator; duplicate/override/cycle regression |
+| 6 Condition parser | High | Extra/mixed conditions may be discarded; source-confirmed, frontend guarded | Strict raw union validation; mixed-group regression |
+| 2 Nested scenarios | Medium | Invalid nested events become 500; frontend guarded | Typed ScenarioInput before handler; equivalent simulate/suite/diff 422 tests |
+| 3 Silent fallback | Medium | novacart/empty custom run a different generator; UI prevents both | Explicit implemented enums and nonempty custom validation; branch tests |
+| 4 Bounds | Medium | Raw zero/negative/unbounded caps; UI limits 1–200 | Shared request bounds; zero/negative/null/upper-bound regression |
+| 10 Attribution | Medium | Same-ID changes can have empty attribution without a review flag | Explicit uncertainty/semantic attribution; effect/priority/state edit tests |
+| 11 Scenario scope | Medium | Baseline-only boundaries, truncation, fixed patterns and source-only omission | Agree generation/diff semantics; candidate boundary/cap/source/denominator tests |
+| 12 Reduction | Medium | Null reductions supported; non-monotone days prevent global-minimum claims | Keep nullable evidence; owner-reviewed non-monotone target/minimality tests |
+| 7 Future compile | High before live use | Silent mock fallback, initialization before validation, swallowed 400; source-only | Explicit mode, input-first validation, safe errors and bounded calls; NEBIUS_HANDOFF.md |
+| 8 Response schemas | Medium | Empty OpenAPI success models; client decoders mitigate only UI paths | Typed response models, nullable examples and OpenAPI regression |
+
+Stress Testing, reports and comparison disclose identity/coverage/shrinking limits.
+Breakdowns by severity/type count returned **unique signatures**, not unavailable
+per-type occurrence frequencies. Original and reduced evidence remain inspectable.
+Nebius handoff additionally identifies retry amplification and incomplete billing
+telemetry; these are future live-integration blockers, not Phase 6 provider tests.
+
+---
+
 No backend code or shared benchmark results were modified. Reproduce bounded
 offline probes with `npm run test:integration`, then
 `node .test-output/tests/backend-contract-probes.js` from `frontend/` with FastAPI

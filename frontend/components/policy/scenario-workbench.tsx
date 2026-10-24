@@ -304,6 +304,7 @@ export function ScenarioWorkbench() {
           policyName={`${active.name} · revision ${active.revision} · ${active.fingerprint}`}
           scenarioName={simulation.scenarioName}
           rules={active.rules}
+          journey={validation.value ?? []}
         />
       )}
     </section>

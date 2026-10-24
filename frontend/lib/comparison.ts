@@ -11,6 +11,12 @@ export type RuleSnapshot = {
   fingerprint: string;
   rules: PolicyRule[];
 };
+export type RuleIdentity = {
+  label: string;
+  origin: string;
+  revision: number | null;
+  fingerprint?: string;
+};
 export type ComparisonInput = {
   baseline: string;
   candidate: string;
@@ -43,6 +49,7 @@ export function buildComparison(
   baselineLabel: string;
   candidateLabel: string;
   scopeLabel: string;
+  identities: [RuleIdentity, RuleIdentity];
 } | null {
   if (
     !data ||
@@ -53,13 +60,26 @@ export function buildComparison(
     return null;
   const choose = (id: string) =>
     id === "v1"
-      ? { rules: data.rules_v1, label: "NovaCart v1 · demo fixture" }
+      ? {
+          rules: data.rules_v1,
+          label: "NovaCart v1 · demo fixture",
+          origin: "Repository demo fixture",
+          revision: null,
+        }
       : id === "v2"
-        ? { rules: data.rules_v2, label: "NovaCart v2 · demo fixture" }
+        ? {
+            rules: data.rules_v2,
+            label: "NovaCart v2 · demo fixture",
+            origin: "Repository demo fixture",
+            revision: null,
+          }
         : id === "snapshot" && snapshot
           ? {
               rules: snapshot.rules,
               label: `${snapshot.name} · ${snapshot.origin} snapshot · rev ${snapshot.revision} · ${snapshot.fingerprint}`,
+              origin: `${snapshot.origin} captured snapshot`,
+              revision: snapshot.revision,
+              fingerprint: snapshot.fingerprint,
             }
           : null;
   const a = choose(input.baseline),
@@ -106,5 +126,9 @@ export function buildComparison(
     baselineLabel: a.label,
     candidateLabel: b.label,
     scopeLabel,
+    identities: [a, b].map(({ rules, ...identity }) => identity) as [
+      RuleIdentity,
+      RuleIdentity,
+    ],
   };
 }

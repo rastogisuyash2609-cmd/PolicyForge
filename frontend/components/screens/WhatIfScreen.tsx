@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useWorkspace } from "@/components/workspace/workspace-provider";
 import {
   Alert,
@@ -170,13 +171,27 @@ export function WhatIfScreen() {
       ) : error ? (
         <Alert title="Comparison failed">{error}</Alert>
       ) : result && prepared ? (
-        <PolicyDiff
-          key={JSON.stringify(prepared)}
-          data={result}
-          baselineLabel={prepared.baselineLabel}
-          candidateLabel={prepared.candidateLabel}
-          scopeLabel={prepared.scopeLabel}
-        />
+        <div className="space-y-5">
+          <Card className="flex flex-wrap items-center justify-between gap-3 p-5">
+            <p role="status" className="text-sm text-muted">
+              Completed · {result.total_scenarios} journeys per rule set · cap{" "}
+              {input.limit}
+            </p>
+            <Link
+              className="inline-flex min-h-11 items-center text-sm text-primary"
+              href="/workspace/reports"
+            >
+              View and export report →
+            </Link>
+          </Card>
+          <PolicyDiff
+            key={JSON.stringify(prepared)}
+            data={result}
+            baselineLabel={prepared.baselineLabel}
+            candidateLabel={prepared.candidateLabel}
+            scopeLabel={prepared.scopeLabel}
+          />
+        </div>
       ) : (
         <Card>
           <EmptyState

@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { buildStress } from "../lib/stress";
+import { createReport, reportJson, reportMarkdown } from "../lib/reports";
 import {
   activateDraft,
   demoDraft,
@@ -14,6 +16,76 @@ import {
 } from "../lib/api";
 
 const base = process.env.POLICYFORGE_TEST_API ?? "http://127.0.0.1:8000";
+test("real stress controls → custom suite → report evidence and revision", async () => {
+  const client = createApiClient({ baseUrl: base });
+  const data = await client.getDefaultData();
+  const active = activateDraft(demoDraft(data, "v1"), 11).value!;
+  const prepared = buildStress(
+    { suite: "custom", limit: 5 },
+    active,
+    data.sample_journeys,
+  )!;
+  const result = await client.runSuite(prepared.request);
+  const report = createReport(
+    { kind: "stress", request: prepared.request, result },
+    active,
+    prepared.scope,
+  );
+  const parsed = JSON.parse(reportJson(report));
+  assert.equal(parsed.rule_sets[0].revision, 11);
+  assert.equal(parsed.metrics.journeys_executed, 5);
+  assert.deepEqual(parsed.result, result);
+  assert.deepEqual(parsed.request.rules, data.rules_v1);
+  assert.ok(reportMarkdown(report).includes(result.summary_table));
+  const item = result.findings.find((f) => f.shrink);
+  assert.ok(item?.shrink);
+  const replay = await client.simulate({
+    rules: active.rules,
+    journey: item.shrink.minimal_journey,
+  });
+  assert.ok(
+    replay.findings.some(
+      (f) =>
+        f.type === item.finding.type &&
+        JSON.stringify([...f.rule_ids].sort()) ===
+          JSON.stringify([...item.finding.rule_ids].sort()),
+    ),
+  );
+});
+test("real chronological payload association and exported event-local states", async () => {
+  const client = createApiClient({ baseUrl: base });
+  const active = activateDraft(
+    {
+      ...emptyDraft(),
+      mode: "manual",
+      name: "Payload report",
+      rulesJson: JSON.stringify([starterRule()]),
+    },
+    12,
+  ).value!;
+  const journey = [
+    {
+      event_type: "REFUND_REQUESTED",
+      day: 15,
+      payload: { customer_tier: "VIP" },
+    },
+    { event_type: "ITEM_DELIVERED", day: 0, payload: { amount_paid: 100 } },
+  ];
+  const result = await client.simulate({ rules: active.rules, journey });
+  assert.equal(result.trace.event_traces[0].event_type, "ITEM_DELIVERED");
+  assert.equal(result.trace.event_traces[0].state_after.amount_paid, 100);
+  assert.equal(
+    result.trace.event_traces[0].state_after.refund_requested,
+    false,
+  );
+  const report = createReport(
+    { kind: "simulation", request: { rules: active.rules, journey }, result },
+    active,
+    "Unsorted two-event journey",
+  );
+  assert.deepEqual(JSON.parse(reportJson(report)).request.journey, journey);
+  assert.equal(result.outcomes.at(-1)?.outcome, "ALLOW");
+});
 async function post<T>(endpoint: string, payload: unknown): Promise<T> {
   const response = await fetch(`${base}${endpoint}`, {
     method: "POST",

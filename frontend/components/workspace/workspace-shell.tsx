@@ -11,6 +11,8 @@ import {
   ShieldAlert,
   FileSearch,
   GitCompareArrows,
+  FlaskConical,
+  Files,
 } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { NavigationDrawer } from "@/components/navigation-drawer";
@@ -24,10 +26,17 @@ const navigation = [
   { href: "/workspace/issues", label: "Issues", icon: ShieldAlert },
   { href: "/workspace/policies", label: "Policies", icon: FileText },
   { href: "/workspace/what-if", label: "What-if", icon: GitCompareArrows },
+  {
+    href: "/workspace/stress-test",
+    label: "Stress Testing",
+    icon: FlaskConical,
+  },
+  { href: "/workspace/reports", label: "Reports", icon: Files },
 ];
 
 function WorkspaceLinks({ collapsed = false }: { collapsed?: boolean }) {
-  const pathname = usePathname();
+  const rawPath = usePathname();
+  const pathname = rawPath === "/workspace" ? "/workspace/issues" : rawPath;
   return (
     <nav aria-label="Workspace" className="space-y-1">
       {navigation.map(({ href, label, icon: Icon }) => (
@@ -54,7 +63,8 @@ function WorkspaceLinks({ collapsed = false }: { collapsed?: boolean }) {
 }
 
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const rawPath = usePathname();
+  const pathname = rawPath === "/workspace" ? "/workspace/issues" : rawPath;
   const [collapsed, setCollapsed] = useState(false);
   const { loading, error, active } = useWorkspace();
   const title =

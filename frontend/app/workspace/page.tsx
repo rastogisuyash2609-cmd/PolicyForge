@@ -1,5 +1,8 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { WorkspaceView } from "@/components/workspace/workspace-view";
+
+export const metadata: Metadata = { title: "Issues" };
 
 export default function Workspace() {
-  redirect("/workspace/issues");
+  return <WorkspaceView view="issues" />;
 }
