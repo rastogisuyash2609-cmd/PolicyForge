@@ -1,7 +1,9 @@
-# Phase 7C — controlled live smoke test preparation
+# Phase 7E — controlled live smoke test preparation
 
-**No additional live Nebius API request has been made during Phase 7C.** The first
-approved test exhausted its old 512-token budget and failed safely. This is a CLI
+**No additional live Nebius API request has been made during Phase 7E.** Two
+approved tests preceded this phase: the first exhausted its old 512-token budget;
+the second completed but failed condition-schema validation. The shared prompt
+now addresses that mismatch; see [the Phase 7E report](NEBIUS_SCHEMA_FIX.md). This is a CLI
 runner, independent of FastAPI and the frontend. Do not execute its live flag
 until the user explicitly approves the test.
 
@@ -35,8 +37,9 @@ The general LLMClient has no output-token-cap argument, while the general
 compiler defaults to two repair attempts and can process multiple clauses.
 The new `SingleRequestClient` implements the existing LLMClient interface with a
 guarded SDK transport, while calling the existing compiler with `max_repairs=0`.
-The shared client, compiler, deterministic algorithms, routes and frontend were
-not modified for this step.
+Phase 7E updates the shared compiler prompt and reuses it in this adapter. The
+compiler's execution/repair logic, shared client, deterministic algorithms, routes
+and frontend are unchanged.
 
 The response must first pass a local Pydantic envelope containing exactly one
 existing Rule. The existing compiler then performs local source grounding,
@@ -121,11 +124,12 @@ Normal pytest retains `-m "not live"` by default. Do not use `pytest -m live` or
 the old PONG integration test as a substitute: those do not enforce this runner's
 bounded single-clause extraction contract.
 
-Phase 7C results (2026-10-29): **43 offline smoke tests passed**; full backend
-regression **164 passed, 1 deselected** (the live-provider test). The existing
+Phase 7E results (2026-10-29): full backend regression **189 passed, 1 deselected**
+(the live-provider test). The existing
 API compile test is included with `use_mock=True`. `tests/conftest.py` blocks real
 synchronous/asynchronous HTTPX transports for every non-live test, even when a
-real key is configured. Frontend regression: **58 passed**.
+real key is configured. The previous frontend regression was **58 passed**;
+frontend files were unchanged and those checks were not rerun in Phase 7E.
 
 Run the full offline backend suite with:
 

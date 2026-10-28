@@ -16,6 +16,7 @@ from policyforge.models import (
     EffectType,
     Operator,
     StateField,
+    LeafCondition,
     Rule,
     RuleSource,
 )
@@ -127,34 +128,60 @@ def check_source_grounding(verbatim_sentence: str, document_text: str) -> bool:
     return norm_sentence in norm_doc
 
 
-def _build_system_prompt() -> str:
-    event_types = [e.value for e in EventType]
-    state_fields = [f.value for f in StateField]
-    decisions = [d.value for d in DecisionType]
-    effects = [e.value for e in EffectType]
-    operators = [o.value for o in Operator]
+def _build_prompt_example() -> dict[str, Any]:
+    """A complete, model-validated format example distinct from the live input."""
+    rule = Rule(
+        id="example", name="7-day refunds", decision=DecisionType.REFUND,
+        trigger=EventType.REFUND_REQUESTED, effect=EffectType.ALLOW,
+        when=LeafCondition(field=StateField.DAYS_SINCE_DELIVERY, op=Operator.LTE, value=7),
+        source=RuleSource(doc_name="example.md", verbatim_sentence=(
+            "Customers may request a refund within 7 days of delivery."
+        )),
+    )
+    return {"rules": [rule.model_dump(mode="json", exclude_defaults=True)]}
 
-    return f"""You are PolicyForge Compiler, an expert at compiling natural language business policy clauses into structured deterministic Rule schemas.
 
-CRITICAL CONSTRAINTS:
-1. Closed Vocabularies:
-- trigger: must be one of {event_types}
-- decision: must be one of {decisions}
-- effect: must be one of {effects}
-- condition field: must be one of {state_fields}
-- condition op: must be one of {operators}
-
-2. Condition Tree Format:
-- Leaf condition: {{"field": "<Field>", "op": "<Op>", "value": <Literal>}}
-- All condition: {{"all": [<Condition>, ...]}}
-- Any condition: {{"any": [<Condition>, ...]}}
-
-3. Source Grounding:
-Every rule must include a "source" dict with "doc_name" and "verbatim_sentence".
-The "verbatim_sentence" MUST BE COPIED EXACTLY word-for-word from the text.
-
-Output MUST be a JSON object containing a "rules" array. If a clause contains no business rule, return {{"rules": []}}.
-"""
+def _build_system_prompt(*, refund_only: bool = False) -> str:
+    """Render the real IR contract; the fixed smoke input needs a smaller vocabulary."""
+    schema = Rule.model_json_schema()
+    definitions = schema["$defs"]
+    required = ",".join(schema["required"])
+    leaf_keys = ",".join(definitions["LeafCondition"]["properties"])
+    source_keys = ",".join(definitions["RuleSource"]["required"])
+    vocabulary = {
+        "trigger": [EventType.REFUND_REQUESTED.value] if refund_only else definitions["EventType"]["enum"],
+        "decision": [DecisionType.REFUND.value] if refund_only else definitions["DecisionType"]["enum"],
+        "effect": definitions["EffectType"]["enum"],
+        "field": [StateField.ITEM_DELIVERED.value, StateField.DAYS_SINCE_DELIVERY.value]
+            if refund_only else definitions["StateField"]["enum"],
+        "op": definitions["Operator"]["enum"],
+    }
+    vocab = "; ".join(f"{key}={','.join(values)}" for key, values in vocabulary.items())
+    optional = {
+        name: field.get_default(call_default_factory=True)
+        for name, field in Rule.model_fields.items() if not field.is_required()
+    }
+    example = json.dumps(_build_prompt_example(), separators=(",", ":"))
+    quantity = "Exactly one rule." if refund_only else 'No business rule: {"rules":[]}.'
+    return (
+        'Return JSON only: {"rules":[...]}. ' + quantity + '\n'
+        f'Rule requires {required}; id/name are short strings. '
+        f'Omit unstated optional defaults {json.dumps(optional, separators=(",", ":"))}.\n'
+        f'when is a leaf with explicit keys {leaf_keys}: '
+        '{"field":"days_since_delivery","op":"LTE","value":7}, '
+        'or recursively AND {"all":[conditions]} / OR {"any":[conditions]}. '
+        'Always include field,op,value in each leaf. Within conditions, state field names are values '
+        'of "field", NEVER object keys; {"days_since_delivery":{"op":"LTE","value":7}} '
+        'is INVALID. Use one node shape at a time; no extra keys.\n'
+        f'Only supported vocabulary: {vocab}.\n'
+        f'source requires {source_keys}: copy doc_name from Document and '
+        'verbatim_sentence exactly from the current input. Extract only stated '
+        'conditions, outcomes and state changes; invent no eligibility, exceptions '
+        'or additional denial rules. No prose, markdown or reasoning text.\n'
+        'Format example for a DIFFERENT policy, Document example.md, Policy: '
+        'Customers may request a refund within 7 days of delivery.\n'
+        + example + '\nUse the current input; do not copy example values or source.'
+    )
 
 
 class PolicyCompiler:

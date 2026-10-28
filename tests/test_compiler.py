@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import Any
 import pytest
 
 from policyforge.models import (
@@ -10,6 +11,8 @@ from policyforge.models import (
     EffectType,
     Operator,
     StateField,
+    LeafCondition,
+    Rule,
 )
 from policyforge.llm import LLMClient
 from policyforge.compiler import (
@@ -17,6 +20,8 @@ from policyforge.compiler import (
     PolicyCompiler,
     split_document_into_clauses,
     check_source_grounding,
+    _build_prompt_example,
+    _build_system_prompt,
 )
 
 
@@ -26,6 +31,63 @@ DOC_SAMPLE = """# NovaCart Returns Policy Sample
 [RP-2] Refund requests submitted more than 30 days after delivery are strictly denied.
 [RP-3] Promotional and marketing items are not eligible for compensation.
 """
+
+
+@pytest.mark.parametrize("refund_only", [False, True])
+def test_prompt_example_is_complete_grounded_ir_and_shared_contract(refund_only: bool) -> None:
+    prompt = _build_system_prompt(refund_only=refund_only)
+    example = _build_prompt_example()
+    # Validate the exact complete example embedded in the prompt, not a second
+    # hand-maintained representation of it.
+    encoded = json.dumps(example, separators=(",", ":"))
+    assert encoded in prompt
+    rule = Rule.model_validate_json(json.dumps(example["rules"][0]))
+    assert isinstance(rule.when, LeafCondition)
+    assert rule.when.field == StateField.DAYS_SINCE_DELIVERY
+    assert rule.when.value == 7
+    assert rule.source.doc_name == "example.md"
+    assert check_source_grounding(rule.source.verbatim_sentence,
+        "Customers may request a refund within 7 days of delivery.")
+    assert "field,op,value" in prompt and "NEVER object keys" in prompt
+    assert "AND" in prompt and '"all"' in prompt
+    assert "OR" in prompt and '"any"' in prompt
+    for field_name, field in Rule.model_fields.items():
+        if field.is_required():
+            assert field_name in prompt
+    for operator in Operator:
+        assert operator.value in prompt
+    if not refund_only:
+        for event in EventType:
+            assert event.value in prompt
+
+
+@pytest.mark.parametrize("condition,accepted", [
+    ({"field": "days_since_delivery", "op": "LTE", "value": 30}, True),
+    ({"days_since_delivery": {"op": "LTE", "value": 30}}, False),
+    ({"field": "days_since_delivery", "op": "BETWEEN", "value": 30}, False),
+    ({"all": [{"days_since_delivery": {"op": "LTE", "value": 30}}]}, False),
+    ({"all": [
+        {"field": "item_delivered", "op": "IS_TRUE", "value": True},
+        {"any": [{"field": "days_since_delivery", "op": "LTE", "value": 30}]},
+    ]}, True),
+])
+def test_real_compiler_condition_contract_without_repairs(condition: dict[str, Any], accepted: bool) -> None:
+    fixture = Path(__file__).parent / "fixtures" / "nebius_smoke" / "valid_policy_ir.json"
+    envelope = json.loads(fixture.read_text(encoding="utf-8"))
+    envelope["rules"][0]["when"] = condition
+    calls: list[list[dict[str, str]]] = []
+    def responder(messages: list[dict[str, str]]) -> str:
+        calls.append(messages)
+        return json.dumps(envelope)
+    client = LLMClient(api_key="mock-key", max_retries=0)
+    client.set_mock_responder(responder)
+    compiler = PolicyCompiler(llm_client=client, max_repairs=0)
+    report = compiler.compile_document(
+        "Customers may request a refund within 30 days of delivery.", "synthetic_refund.md")
+    assert len(calls) == 1
+    assert bool(report.compiled_rules) is accepted
+    assert bool(report.rejected_rules) is not accepted
+    assert "NEVER object keys" in calls[0][0]["content"]
 
 
 def test_split_document_into_clauses():

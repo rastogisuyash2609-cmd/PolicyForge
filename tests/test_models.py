@@ -1,5 +1,9 @@
 """Tests for PolicyForge models and closed-vocabulary schemas."""
 
+from copy import deepcopy
+import json
+from pathlib import Path
+from typing import Any
 import pytest
 from pydantic import ValidationError
 
@@ -22,6 +26,70 @@ from policyforge.models import (
     Event,
     parse_condition_tree,
 )
+
+
+def _fixture_rule() -> dict[str, Any]:
+    path = Path(__file__).parent / "fixtures" / "nebius_smoke" / "valid_policy_ir.json"
+    return json.loads(path.read_text(encoding="utf-8"))["rules"][0]
+
+
+def test_corrected_leaf_is_valid_inside_complete_parent_rule() -> None:
+    leaf = {"field": "days_since_delivery", "op": "LTE", "value": 30}
+    assert LeafCondition.model_validate(leaf).value == 30
+    rule = _fixture_rule()
+    rule["when"] = leaf
+    parsed = Rule.model_validate(rule)
+    assert isinstance(parsed.when, LeafCondition)
+    assert parsed.when.field == StateField.DAYS_SINCE_DELIVERY
+    # The leaf is not a complete Rule or a response envelope.
+    with pytest.raises(ValidationError):
+        Rule.model_validate(leaf)
+
+
+@pytest.mark.parametrize("wrapper", ["leaf", "all", "any"])
+def test_recorded_dynamic_key_condition_is_rejected_in_every_position(wrapper: str) -> None:
+    path = Path(__file__).parent / "fixtures" / "nebius_smoke" / "second_live_metadata.json"
+    condition = json.loads(path.read_text(encoding="utf-8"))["invalid_condition"]
+    original = deepcopy(condition)
+    with pytest.raises(ValidationError):
+        LeafCondition.model_validate(condition)
+    rule = _fixture_rule()
+    rule["when"] = condition if wrapper == "leaf" else {wrapper: [condition]}
+    with pytest.raises(ValidationError):
+        Rule.model_validate(rule)
+    assert condition == original  # No dynamic-key conversion is performed.
+
+
+@pytest.mark.parametrize("operator", ["BETWEEN", "LESS_THAN_OR_EQUAL", "lte", "EXECUTE"])
+def test_unsupported_condition_operators_are_rejected(operator: str) -> None:
+    rule = _fixture_rule()
+    rule["when"] = {"field": "days_since_delivery", "op": operator, "value": 30}
+    with pytest.raises(ValidationError):
+        Rule.model_validate(rule)
+
+
+def test_nested_and_or_conditions_round_trip_without_changing_meaning() -> None:
+    condition = {"all": [
+        {"field": "item_delivered", "op": "IS_TRUE", "value": True},
+        {"any": [
+            {"field": "days_since_delivery", "op": "LTE", "value": 30},
+            {"all": [
+                {"field": "days_since_delivery", "op": "LTE", "value": 60},
+                {"field": "customer_tier", "op": "EQ", "value": "VIP"},
+            ]},
+        ]},
+    ]}
+    rule = _fixture_rule()
+    rule["when"] = deepcopy(condition)
+    assert Rule.model_validate(rule).when.model_dump(mode="json") == condition
+
+
+@pytest.mark.parametrize("field", Rule.model_json_schema()["required"])
+def test_every_mandatory_parent_rule_field_is_required(field: str) -> None:
+    rule = _fixture_rule()
+    rule.pop(field)
+    with pytest.raises(ValidationError):
+        Rule.model_validate(rule)
 
 
 def test_closed_vocabulary_event_types():

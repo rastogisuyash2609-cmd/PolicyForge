@@ -22,7 +22,7 @@ import openai
 from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError
 
-from policyforge.compiler import PolicyCompiler, split_document_into_clauses
+from policyforge.compiler import PolicyCompiler, _build_system_prompt, split_document_into_clauses
 from policyforge.llm import LLMCallRecord, LLMClient
 from policyforge.models import Rule
 
@@ -98,27 +98,9 @@ class SmokeEnvelope(BaseModel):
 
 
 def build_smoke_messages() -> list[ChatCompletionMessageParam]:
-    """Compact extraction instructions for the fixed refund input only.
-
-    This narrows the prompt vocabulary, not the shared Rule schema. No answer,
-    threshold, extra business conditions or default-denial rule is supplied.
-    """
+    """Use the shared schema-derived instructions with the fixed refund vocabulary."""
     return [
-        {"role": "system", "content": (
-            'Extract the policy into JSON only: {"rules":[<one rule>]}. '
-            'Required rule fields: id and name (short strings), decision '
-            '(REFUND), trigger (REFUND_REQUESTED), effect (ALLOW or DENY), '
-            'when, source. when is a leaf {"field":...,"op":...,"value":...} '
-            'or nested {"all":[...]} / {"any":[...]}. Relevant fields: '
-            'item_delivered (boolean), days_since_delivery (integer). '
-            'Ops: IS_TRUE, IS_FALSE, EQ, NEQ, LT, LTE, GT, GTE. '
-            'Extract the stated time limit and outcome; add no unstated '
-            'eligibility, exceptions, state changes or denial rules. '
-            'source requires doc_name copied from Document and '
-            'verbatim_sentence copied exactly from Policy. Omit optional '
-            'defaults priority, overrides and state_updates. No extra fields, '
-            'explanation, markdown or reasoning text.'
-        )},
+        {"role": "system", "content": _build_system_prompt(refund_only=True)},
         {"role": "user", "content": f"Document: {DOC_NAME}\nPolicy: {POLICY_TEXT}"},
     ]
 

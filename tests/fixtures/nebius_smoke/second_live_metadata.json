@@ -1,0 +1,9 @@
+{
+  "provenance": "Sanitized metadata and offending condition from the second approved live test. Full response content was not retained; surrounding test rules are synthetic.",
+  "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+  "finish_reason": "stop",
+  "usage": {"prompt_tokens": 221, "completion_tokens": 1251, "total_tokens": 1472},
+  "reasoning_tokens": null,
+  "invalid_condition": {"days_since_delivery": {"op": "LTE", "value": 30}},
+  "provider_requests": 1
+}

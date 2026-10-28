@@ -379,6 +379,7 @@ def test_compact_prompt_preserves_required_fields_without_supplying_answer() -> 
     messages = smoke.build_smoke_messages()
     instruction = str(messages[0]["content"])
     assert len(instruction) < len(_build_system_prompt())
+    assert instruction == _build_system_prompt(refund_only=True)
     assert "30" not in instruction
     for name, field in Rule.model_fields.items():
         if field.is_required():
@@ -408,3 +409,56 @@ def test_other_policy_input_is_blocked_before_network(configuration: smoke.Smoke
 def test_offline_suite_blocks_real_http_transport() -> None:
     with pytest.raises(AssertionError, match="HTTP.*(forbidden|prohibited)"):
         httpx.HTTPTransport().handle_request(httpx.Request("GET", "https://example.invalid"))
+
+
+def test_second_live_bad_condition_is_rejected_without_repair(
+    configuration: smoke.SmokeConfiguration,
+) -> None:
+    metadata = json.loads((FIXTURES / "second_live_metadata.json").read_text(encoding="utf-8"))
+    # Surrounding rule is synthetic: the only saved response fragment is when.
+    rule = valid_rule()
+    rule["when"] = metadata["invalid_condition"]
+    content = json.dumps({"rules": [rule]})
+    data = json.loads(completion(content, finish=metadata["finish_reason"]).content)
+    data["usage"] = metadata["usage"]
+    calls: list[httpx.Request] = []
+    def handle(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(200, json=data)
+    result = smoke.run_smoke(execute=True, configuration=configuration,
+                            offline_transport=httpx.MockTransport(handle))
+    assert result["status"] == result["validation"] == "failed"
+    assert result["validated_rules"] == []
+    assert result["errors"][0]["type"] == "value_error"
+    assert result["finish_reason"] == "stop" and result["token_usage"] == metadata["usage"]
+    assert result["reasoning_tokens"] is None
+    assert len(calls) == result["provider_requests"] == 1
+    assert json.loads(content)["rules"][0]["when"] == metadata["invalid_condition"]
+
+
+def test_sdk_json_schema_serialization_with_mock_does_not_establish_provider_support(
+    configuration: smoke.SmokeConfiguration,
+) -> None:
+    schema = smoke.SmokeEnvelope.model_json_schema()
+    calls: list[httpx.Request] = []
+    def handle(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        body = json.loads(request.content)
+        assert body["response_format"] == {"type": "json_schema", "json_schema": {
+            "name": "policy_ir", "strict": True, "schema": schema,
+        }}
+        return completion((FIXTURES / "valid_policy_ir.json").read_text(encoding="utf-8"))
+    guard = smoke.OneRequestTransport(configuration.base_url, httpx.MockTransport(handle))
+    with smoke.openai.OpenAI(
+        api_key=OFFLINE_SECRET, base_url=configuration.base_url, max_retries=0,
+        timeout=smoke.TIMEOUT_SECONDS, http_client=httpx.Client(transport=guard),
+    ) as client:
+        result = client.chat.completions.create(
+            model=configuration.model, messages=smoke.build_smoke_messages(),
+            max_tokens=smoke.MAX_OUTPUT_TOKENS, n=1, stream=False,
+            response_format={"type": "json_schema", "json_schema": {
+                "name": "policy_ir", "strict": True, "schema": schema,
+            }},
+        )
+    smoke.SmokeEnvelope.model_validate_json(result.choices[0].message.content or "")
+    assert len(calls) == guard.attempts == 1
