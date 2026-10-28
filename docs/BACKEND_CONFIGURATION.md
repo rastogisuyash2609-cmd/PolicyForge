@@ -71,5 +71,9 @@ general compiler currently defaults to two repairs and has no output-token cap;
 do not use its unrestricted defaults for that test. Account access and actual
 extraction remain unverified until the separately authorized smoke test.
 
+The dedicated runner is now prepared at `backend/policyforge/nebius_smoke.py`.
+See [NEBIUS_SMOKE_TEST.md](NEBIUS_SMOKE_TEST.md) for its local-only preflight,
+offline verification and separately approved one-request execution command.
+
 No fake API key or paid inference request was made during this preparation.
 Configure the real key manually, then ask to continue.
