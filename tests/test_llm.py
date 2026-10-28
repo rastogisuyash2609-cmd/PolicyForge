@@ -7,6 +7,8 @@ from policyforge.llm import LLMClient, LLMCallRecord
 
 def test_llm_client_mock_completion_and_telemetry():
     client = LLMClient(api_key="mock-key")
+    assert client._client is not None
+    assert client._client.max_retries == 0
 
     def mock_responder(messages: list[dict[str, str]]) -> str:
         return '{"rules": [{"id": "test_rule"}]}'

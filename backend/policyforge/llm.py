@@ -5,13 +5,22 @@ from __future__ import annotations
 import os
 import time
 import random
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, Callable
 from dotenv import load_dotenv
 import openai
 
-# Load environment variables from .env if present
-load_dotenv()
+# Always use this checkout's root .env, including when started from backend/.
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+
+
+def load_backend_environment(env_file: Path = ENV_FILE) -> bool:
+    """Load local settings without overriding explicitly inherited variables."""
+    return load_dotenv(dotenv_path=env_file, override=False)
+
+
+load_backend_environment()
 
 
 @dataclass
@@ -48,13 +57,13 @@ class LLMClient:
             base_url
             or os.getenv("NEBIUS_BASE_URL")
             or os.getenv("OPENAI_BASE_URL")
-            or "https://api.tokenfactory.nebius.ai/v1"
+            or "https://api.tokenfactory.nebius.com/v1/"
         )
         self.model = (
             model
             or os.getenv("NEBIUS_MODEL")
             or os.getenv("OPENAI_MODEL")
-            or "nvidia/nemotron-4-340b-instruct"
+            or "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
         )
         self.timeout = (
             timeout
@@ -64,7 +73,7 @@ class LLMClient:
         self.max_retries = (
             max_retries
             if max_retries is not None
-            else int(os.getenv("MAX_RETRIES", "3"))
+            else int(os.getenv("MAX_RETRIES", "0"))
         )
 
         self.call_history: list[LLMCallRecord] = []
@@ -76,6 +85,8 @@ class LLMClient:
                 api_key=self.api_key,
                 base_url=self.base_url,
                 timeout=self.timeout,
+                # The wrapper owns retries; do not multiply them inside the SDK.
+                max_retries=0,
             )
 
     def set_mock_responder(self, responder: Callable[[list[dict[str, str]]], str] | None) -> None:
