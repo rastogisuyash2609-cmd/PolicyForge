@@ -273,10 +273,11 @@ class PolicyCompiler:
 
         return rules, rejected
 
-    def compile_document(self, doc_text: str, doc_name: str) -> CompileReport:
+    def compile_document(self, doc_text: str, doc_name: str, *, whole_document: bool = False) -> CompileReport:
         """Compile a policy document into validated rules with coverage and lint analysis."""
         start_time = time.perf_counter()
-        clauses = split_document_into_clauses(doc_text, doc_name)
+        clauses = ([Clause(id="whole_document", text=doc_text, doc_name=doc_name, line_number=1)]
+                   if whole_document else split_document_into_clauses(doc_text, doc_name))
 
         compiled_rules: list[Rule] = []
         all_rejected: list[dict[str, Any]] = []

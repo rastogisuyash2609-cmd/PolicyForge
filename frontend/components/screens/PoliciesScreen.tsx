@@ -44,14 +44,15 @@ export function PoliciesScreen() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="break-words text-sm font-medium">{active.name}</p>
               <Badge tone={active.origin === "manual" ? "info" : "primary"}>
-                {active.origin === "manual" ? "Manual rules" : "Demo Policy"}
+                {active.origin === "ai" ? "AI compiled" : active.origin === "manual" ? "Manual rules" : "Demo Policy"}
               </Badge>
             </div>
             <p className="font-mono text-xs text-muted">
               Revision {active.revision} · {active.fingerprint}
             </p>
             <p className="text-sm leading-7 text-muted">
-              {active.origin === "manual"
+              {active.origin === "ai" ? "AI-extracted rules passed local schema and source-grounding checks. Human review remains necessary; validation does not establish policy completeness."
+                : active.origin === "manual"
                 ? "Rules and source metadata were supplied manually. Source quotations are not independently verified or AI-grounded."
                 : "Predefined repository fixtures, not freshly extracted rules. Source quotations do not establish exhaustive policy coverage."}
             </p>
@@ -95,6 +96,7 @@ export function PoliciesScreen() {
                         key={rule.id}
                         rule={rule}
                         manual={active.origin === "manual"}
+                        aiCompiled={active.origin === "ai"}
                       />
                     ))}
                   </div>

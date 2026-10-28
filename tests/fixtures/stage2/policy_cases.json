@@ -1,0 +1,481 @@
+[
+  {
+    "id": "simple_refund",
+    "category": "Simple refunds",
+    "doc_name": "simple_refund.md",
+    "document_text": "Customers may request a refund within 30 days of delivery.",
+    "rules": [
+      {
+        "id": "simple_refund",
+        "name": "simple_refund",
+        "decision": "REFUND",
+        "trigger": "REFUND_REQUESTED",
+        "when": {
+          "field": "days_since_delivery",
+          "op": "LTE",
+          "value": 30
+        },
+        "effect": "ALLOW",
+        "priority": 0,
+        "overrides": [],
+        "state_updates": null,
+        "source": {
+          "doc_name": "simple_refund.md",
+          "verbatim_sentence": "Customers may request a refund within 30 days of delivery."
+        }
+      }
+    ],
+    "supported_fields": [
+      "days_since_delivery"
+    ],
+    "supported_operators": [
+      "LTE"
+    ],
+    "expected_grounding": "Each source quotation must occur verbatim in this document and use its exact doc_name.",
+    "validation": "accept",
+    "live_inference_required_for_offline_tests": false,
+    "future_live_purpose": "Optional, separately authorized extraction-quality check; never automatic.",
+    "checks": [
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 0,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW"
+      },
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 30,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW"
+      },
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 31,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY"
+      }
+    ]
+  },
+  {
+    "id": "damaged_replacement",
+    "category": "Replacement eligibility",
+    "doc_name": "damaged_replacement.md",
+    "document_text": "Customers may request a replacement within 14 days of delivery when the item is damaged.",
+    "rules": [
+      {
+        "id": "damaged_replacement",
+        "name": "damaged_replacement",
+        "decision": "REPLACEMENT",
+        "trigger": "REPLACEMENT_REQUESTED",
+        "when": {
+          "all": [
+            {
+              "field": "item_damaged",
+              "op": "IS_TRUE",
+              "value": true
+            },
+            {
+              "field": "days_since_delivery",
+              "op": "LTE",
+              "value": 14
+            }
+          ]
+        },
+        "effect": "ALLOW",
+        "priority": 0,
+        "overrides": [],
+        "state_updates": null,
+        "source": {
+          "doc_name": "damaged_replacement.md",
+          "verbatim_sentence": "Customers may request a replacement within 14 days of delivery when the item is damaged."
+        }
+      }
+    ],
+    "supported_fields": [
+      "item_damaged",
+      "days_since_delivery"
+    ],
+    "supported_operators": [
+      "IS_TRUE",
+      "LTE"
+    ],
+    "expected_grounding": "Each source quotation must occur verbatim in this document and use its exact doc_name.",
+    "validation": "accept",
+    "live_inference_required_for_offline_tests": false,
+    "future_live_purpose": "Optional, separately authorized extraction-quality check; never automatic.",
+    "checks": [
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DAMAGED_REPORTED",
+            "day": 1,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 14,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW"
+      },
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 14,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY"
+      },
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DAMAGED_REPORTED",
+            "day": 1,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 15,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY"
+      }
+    ]
+  },
+  {
+    "id": "cancelled_replacement",
+    "category": "Cancellation conditions",
+    "doc_name": "cancelled_replacement.md",
+    "document_text": "Customers may request a refund after a replacement has been cancelled.",
+    "rules": [
+      {
+        "id": "cancelled_replacement",
+        "name": "cancelled_replacement",
+        "decision": "REFUND",
+        "trigger": "REFUND_REQUESTED",
+        "when": {
+          "field": "replacement_cancelled",
+          "op": "IS_TRUE",
+          "value": true
+        },
+        "effect": "ALLOW",
+        "priority": 0,
+        "overrides": [],
+        "state_updates": null,
+        "source": {
+          "doc_name": "cancelled_replacement.md",
+          "verbatim_sentence": "Customers may request a refund after a replacement has been cancelled."
+        }
+      }
+    ],
+    "supported_fields": [
+      "replacement_cancelled"
+    ],
+    "supported_operators": [
+      "IS_TRUE"
+    ],
+    "expected_grounding": "Each source quotation must occur verbatim in this document and use its exact doc_name.",
+    "validation": "accept",
+    "live_inference_required_for_offline_tests": false,
+    "future_live_purpose": "Optional, separately authorized extraction-quality check; never automatic.",
+    "checks": [
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_CANCELLED",
+            "day": 5,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 10,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW"
+      },
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 10,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY"
+      }
+    ]
+  },
+  {
+    "id": "combined_policy",
+    "category": "Combined refunds/replacements",
+    "doc_name": "combined_policy.md",
+    "document_text": "Customers may request a refund within 30 days of delivery.\nCustomers may request a replacement within 14 days of delivery.",
+    "rules": [
+      {
+        "id": "combined_policy",
+        "name": "combined_policy",
+        "decision": "REFUND",
+        "trigger": "REFUND_REQUESTED",
+        "when": {
+          "field": "days_since_delivery",
+          "op": "LTE",
+          "value": 30
+        },
+        "effect": "ALLOW",
+        "priority": 0,
+        "overrides": [],
+        "state_updates": null,
+        "source": {
+          "doc_name": "combined_policy.md",
+          "verbatim_sentence": "Customers may request a refund within 30 days of delivery."
+        }
+      },
+      {
+        "id": "combined_replacement",
+        "name": "combined_policy",
+        "decision": "REPLACEMENT",
+        "trigger": "REPLACEMENT_REQUESTED",
+        "when": {
+          "field": "days_since_delivery",
+          "op": "LTE",
+          "value": 14
+        },
+        "effect": "ALLOW",
+        "priority": 0,
+        "overrides": [],
+        "state_updates": null,
+        "source": {
+          "doc_name": "combined_policy.md",
+          "verbatim_sentence": "Customers may request a replacement within 14 days of delivery."
+        }
+      }
+    ],
+    "supported_fields": [
+      "days_since_delivery"
+    ],
+    "supported_operators": [
+      "LTE"
+    ],
+    "expected_grounding": "Each source quotation must occur verbatim in this document and use its exact doc_name.",
+    "validation": "accept",
+    "live_inference_required_for_offline_tests": false,
+    "future_live_purpose": "Optional, separately authorized extraction-quality check; never automatic.",
+    "checks": [
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 30,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW"
+      },
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 31,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY"
+      },
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 14,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW"
+      },
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 15,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY"
+      }
+    ]
+  },
+  {
+    "id": "strict_boundary",
+    "category": "Boundary conditions",
+    "doc_name": "strict_boundary.md",
+    "document_text": "Refund requests are allowed less than 30 days after delivery.",
+    "rules": [
+      {
+        "id": "strict_boundary",
+        "name": "strict_boundary",
+        "decision": "REFUND",
+        "trigger": "REFUND_REQUESTED",
+        "when": {
+          "field": "days_since_delivery",
+          "op": "LT",
+          "value": 30
+        },
+        "effect": "ALLOW",
+        "priority": 0,
+        "overrides": [],
+        "state_updates": null,
+        "source": {
+          "doc_name": "strict_boundary.md",
+          "verbatim_sentence": "Refund requests are allowed less than 30 days after delivery."
+        }
+      }
+    ],
+    "supported_fields": [
+      "days_since_delivery"
+    ],
+    "supported_operators": [
+      "LT"
+    ],
+    "expected_grounding": "Each source quotation must occur verbatim in this document and use its exact doc_name.",
+    "validation": "accept",
+    "live_inference_required_for_offline_tests": false,
+    "future_live_purpose": "Optional, separately authorized extraction-quality check; never automatic.",
+    "checks": [
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 29,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW"
+      },
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 30,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY"
+      },
+      {
+        "journey": [
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 31,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY"
+      }
+    ]
+  },
+  {
+    "id": "ambiguous_window",
+    "category": "Ambiguous language",
+    "doc_name": "ambiguous_window.md",
+    "document_text": "Refunds may be available within a reasonable time.",
+    "rules": [],
+    "supported_fields": [],
+    "supported_operators": [],
+    "expected_grounding": "Each source quotation must occur verbatim in this document and use its exact doc_name.",
+    "validation": "reject_or_request_human_clarification; never invent a numeric window",
+    "live_inference_required_for_offline_tests": false,
+    "future_live_purpose": "Optional, separately authorized extraction-quality check; never automatic.",
+    "checks": []
+  }
+]

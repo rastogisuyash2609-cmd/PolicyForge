@@ -1,5 +1,10 @@
 # Phase 5 API contract and integration matrix
 
+**Phase 8 update:** the compile row below is historical. Analyze now uses a guarded,
+explicit POST /api/compile with authorization/idempotency headers and strict runtime
+response decoding. Live mode defaults OFF; no implicit fixture fallback or repair
+is allowed. See `../docs/PHASE8.md` for the updated contract and test results.
+
 Audited against `backend/policyforge/api.py`, `models.py`, `scenarios.py`,
 `shrink.py` and `diff.py`. No backend changes. Compile was inspected only: no
 HTTP request to `/api/compile` was made. OpenAPI was retrieved through its GET

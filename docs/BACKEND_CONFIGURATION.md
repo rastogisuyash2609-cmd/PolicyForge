@@ -1,5 +1,12 @@
 # Local Nebius configuration
 
+**Phase 8 update:** this file preserves the original credential-setup history.
+Current live UI/API controls, startup and deployment instructions are in
+[DEPLOYMENT.md](DEPLOYMENT.md) and [PHASE8.md](PHASE8.md). The provider key was
+already configured by the owner before Phase 8; no credentials were changed here.
+The running backend explicitly has live AI OFF. Compilation now has a separate
+guarded API path; earlier unrestricted-route warnings below describe prior code.
+
 Backend source directory:
 `C:\Users\Suyash Rastogi\PolicyForge\backend`
 

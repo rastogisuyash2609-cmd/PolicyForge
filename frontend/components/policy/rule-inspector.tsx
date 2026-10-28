@@ -52,9 +52,11 @@ function ConditionText({ node }: { node: unknown }) {
 export function RuleInspector({
   rule,
   manual = false,
+  aiCompiled = false,
 }: {
   rule: PolicyRule;
   manual?: boolean;
+  aiCompiled?: boolean;
 }) {
   return (
     <Card className="overflow-hidden">
@@ -83,7 +85,7 @@ export function RuleInspector({
           <p className="text-xs text-muted">No source quotation provided.</p>
         )}
         <p className="break-words text-xs text-muted">
-          {manual ? "User-supplied source · " : "Fixture source · "}
+          {aiCompiled ? "Locally grounded source · " : manual ? "User-supplied source · " : "Fixture source · "}
           {rule.source.doc_name || "Not specified"}
           {manual && " · not independently verified"}
         </p>

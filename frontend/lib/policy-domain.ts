@@ -70,7 +70,8 @@ export type Scenario = {
   journey: JourneyEvent[];
 };
 export type PolicyDraft = {
-  mode: "demo" | "manual";
+  mode: "demo" | "manual" | "ai";
+  compilation?: CompilationProvenance;
   example: "v1" | "v2" | "";
   name: string;
   text: string;
@@ -79,7 +80,8 @@ export type PolicyDraft = {
 };
 export type ActivePolicy = {
   name: string;
-  origin: "demo" | "manual";
+  origin: "demo" | "manual" | "ai";
+  compilation?: CompilationProvenance;
   rules: PolicyRule[];
   documents: string;
   fingerprint: string;
@@ -91,6 +93,7 @@ export type Validation<T> = {
   errors: string[];
   warnings: string[];
 };
+export type CompilationProvenance = { model: string; requestId: string; usage: Record<string, unknown>; finishReason: string };
 const record = (x: unknown): x is Record<string, unknown> =>
   typeof x === "object" && x !== null && !Array.isArray(x);
 const scalarValid = (field: string, value: unknown) => {
@@ -487,6 +490,8 @@ export function activateDraft(
   revision: number,
 ): Validation<ActivePolicy> {
   const validation = validateRules(draft.rulesJson);
+  if (draft.mode === "ai" && (draft.referenceEdited || !draft.compilation))
+    validation.errors.push("AI rules require their unchanged compiled source. Recompile explicitly or switch to manual review.");
   if (draft.referenceEdited)
     validation.warnings.push(
       "Reference text was edited; rule conditions and source quotations were not regenerated or verified.",
@@ -507,6 +512,7 @@ export function activateDraft(
         : {
             name: draft.name.trim(),
             origin: draft.mode,
+            compilation: draft.mode === "ai" ? draft.compilation : undefined,
             rules: validation.value,
             documents: draft.text,
             fingerprint: fingerprint(validation.value),

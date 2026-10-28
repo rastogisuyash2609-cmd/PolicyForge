@@ -29,6 +29,8 @@ function object(value: unknown): value is Record<string, unknown> {
 }
 export function normalizeHttpError(status: number, body: unknown): ApiError {
   const detail = object(body) ? body.detail : undefined;
+  if (object(detail) && typeof detail.code === "string" && typeof detail.message === "string")
+    return new ApiError(detail.message.slice(0, 400), "http", status, detail);
   const fields = Array.isArray(detail)
     ? detail
         .filter(object)
@@ -72,7 +74,7 @@ export function createTransport(config: HttpConfig = {}) {
   return async function request<T>(
     endpoint: string,
     decode: Decoder<T>,
-    options: { body?: unknown; signal?: AbortSignal; timeoutMs?: number } = {},
+    options: { body?: unknown; signal?: AbortSignal; timeoutMs?: number; headers?: Record<string, string> } = {},
   ): Promise<T> {
     const controller = new AbortController();
     let timedOut = false;
@@ -96,6 +98,7 @@ export function createTransport(config: HttpConfig = {}) {
             : {
                 Accept: "application/json",
                 "Content-Type": "application/json",
+                ...options.headers,
               },
         body:
           options.body === undefined ? undefined : JSON.stringify(options.body),

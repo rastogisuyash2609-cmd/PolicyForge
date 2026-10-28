@@ -5,6 +5,7 @@ __pycache__/
 .hypothesis/
 .env
 .env.*
+.venv/
 !.env.example
 *.egg-info/
 dist/

@@ -34,6 +34,11 @@ export interface DefaultData {
 }
 
 export interface CompileResponse {
+  mode?: "live";
+  model?: string;
+  request_id?: string;
+  provider_requests?: number;
+  finish_reason?: string;
   total_clauses: number;
   mapped_clauses: number;
   unmapped_clauses: Array<{
@@ -215,6 +220,7 @@ export interface ScenarioInput {
   tags?: string[];
 }
 export interface CompileRequest {
+  live?: boolean;
   documents?: Record<string, string>;
   document_text?: string;
   doc_name?: string;

@@ -23,7 +23,7 @@ export const limitations = [
   "A reduced counterexample is not guaranteed to be globally shortest. Missing reductions are not fabricated.",
   "Generated boundaries and truncation limit coverage. Backend pairwise uses fixed patterns; comparison boundaries come from baseline rules only.",
   "Diff attribution IDs are candidates, not causal proof. Source-only edits are omitted from definition changes. Coverage and health are suite-dependent.",
-  "No natural-language extraction or external inference was executed. Reference quotations are rule evidence, not independently verified source validity.",
+  "Testing and findings are deterministic. Rule origin is recorded separately; AI extraction does not establish completeness or business correctness. Reference quotations remain evidence to review.",
 ];
 export function createReport(
   input: ReportInput,
@@ -105,6 +105,7 @@ export function createReport(
         revision: policy.revision,
         fingerprint: policy.fingerprint,
         origin: policy.origin,
+        compilation: policy.compilation,
       },
       rule_sets: ruleSets,
       scope,
@@ -126,6 +127,7 @@ export type AnalysisReport = {
     revision: number;
     fingerprint: string;
     origin: string;
+    compilation?: ActivePolicy["compilation"];
   };
   rule_sets: Array<{
     label: string;

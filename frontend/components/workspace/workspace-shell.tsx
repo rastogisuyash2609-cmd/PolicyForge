@@ -101,7 +101,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
                 <br />
                 {active?.origin === "manual"
                   ? "Manually created rules."
-                  : "Known demo rules."}
+                  : active?.origin === "ai" ? "AI-extracted rules · reviewed before activation." : "Known demo rules."}
               </p>
             </div>
           )}
@@ -161,7 +161,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               /
             </span>
             <span className="hidden text-xs text-muted sm:inline">
-              {active?.origin === "manual" ? "Manual rules" : "Demo Policy"}
+              {active?.origin === "ai" ? "AI compiled" : active?.origin === "manual" ? "Manual rules" : "Demo Policy"}
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-3">
@@ -194,13 +194,13 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             </div>
             <Badge>
               {active
-                ? `${active.origin === "manual" ? "Manual" : "Demo"} · rev ${active.revision}`
+                ? `${active.origin === "ai" ? "AI compiled" : active.origin === "manual" ? "Manual" : "Demo"} · rev ${active.revision}`
                 : "No active rules"}
             </Badge>
           </div>
           {children}
           <footer className="mt-10 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-5 text-xs text-muted">
-            <span>Offline structured rules. Deterministic findings.</span>
+            <span>Reviewed rules. Deterministic findings.</span>
             <Link
               href="/"
               className="inline-flex min-h-11 items-center gap-1 rounded-md hover:text-text"

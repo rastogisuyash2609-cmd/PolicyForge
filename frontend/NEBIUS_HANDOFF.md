@@ -1,5 +1,9 @@
 # Phase 6.5 integration handoff — plan only
 
+**Historical plan:** Phase 8 has implemented the guarded UI/API integration offline.
+See `../docs/PHASE8.md` for current behavior and deployment blockers. Live AI
+remains OFF; no additional provider call occurred during Phase 8.
+
 Phase 6 incurred zero provider inference cost. No credentials were inspected,
 requested or configured. No `/api/compile` HTTP request or live benchmark ran.
 This document describes future coordinated work, not enabled functionality.
@@ -123,3 +127,9 @@ and browser workflow/responsive checklist are ready to rerun after integration.
 Add recorded compile cases and origin propagation to them. Live tests remain
 opt-in, excluded from standard regression commands and CI. No automated paid
 regression suite or live benchmark should be introduced by default.
+# Phase 8 status
+
+The guarded UI/API integration is now implemented and tested offline. The historical
+handoff below records earlier constraints. See `../docs/PHASE8.md`,
+`../docs/DEPLOYMENT.md`, and `../docs/STAGE2_POLICY_CASES.md` for current behavior.
+No Phase 8 live inference occurred; feature opt-in remains OFF locally.

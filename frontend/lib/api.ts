@@ -9,6 +9,7 @@ import type {
 import { createTransport, ApiError, type HttpConfig } from "./http-client";
 import {
   defaultDataContract,
+  compileContract,
   diffContract,
   healthContract,
   shrinkContract,
@@ -82,14 +83,21 @@ export function createApiClient(config: HttpConfig = {}) {
       request("/api/health", healthContract, { signal }),
     getDefaultData: (signal?: AbortSignal) =>
       request("/api/default-data", defaultDataContract, { signal }),
-    // Prevent accidental provider access through the legacy, unmounted Compiler.
-    compile: (_params: CompileRequest): Promise<CompileResponse> =>
-      Promise.reject(
-        new ApiError(
-          "AI compilation is disabled in this offline workspace. Create structured rules or select a known demo.",
-          "disabled",
-        ),
-      ),
+    compile: async (params: CompileRequest, authorization?: {accessCode: string; requestId: string}, signal?: AbortSignal): Promise<CompileResponse> => {
+      if (!params.live || !authorization?.accessCode || !authorization.requestId)
+        throw new ApiError("Live compilation needs explicit consent and a workspace access code.", "disabled");
+      const text = params.document_text ?? "";
+      if (!text.trim() || text.length > 4000 || params.documents || params.use_mock || (params.max_repairs ?? 0) !== 0)
+        throw new ApiError("Provide one policy of 1 to 4000 characters. Repairs and batch compilation are disabled.", "validation");
+      const result = await request("/api/compile", compileContract, {body: {...params, max_repairs: 0}, signal,
+        timeoutMs: config.timeoutMs ?? 40_000,
+        headers: {Authorization: `Bearer ${authorization.accessCode}`, "Idempotency-Key": authorization.requestId}});
+      requireRules(result.compiled_rules);
+      if (result.provider_requests !== 1 || result.rejected_rules.length || result.unmapped_clauses.length ||
+          result.compiled_rules.some((r) => !result.rule_confidence[r.id]?.grounded))
+        throw new ApiError("Compilation was not completely validated. Previous rules were preserved.", "contract");
+      return result;
+    },
     simulate: async (params: SimulateRequest, signal?: AbortSignal) => {
       requireRules(params.rules);
       requireJourney(params.journey);

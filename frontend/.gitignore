@@ -12,6 +12,7 @@
 
 # next.js
 /.next/
+/.next-phase8-e2e/
 /out/
 
 # production

@@ -24,6 +24,7 @@ export function AnalyzeScreen() {
     activate,
     editorIndex,
     setEditorIndex,
+    compilation,
   } = useWorkspace();
   const review = activateDraft(draft, (active?.revision ?? 0) + 1);
   const hasDraft = draft.rulesJson !== "[]" || Boolean(draft.name.trim());
@@ -32,14 +33,14 @@ export function AnalyzeScreen() {
   return (
     <div className="space-y-8">
       <SectionHeader
-        eyebrow="Offline policy analysis"
+        eyebrow="Policy analysis"
         title="Analyze a policy"
         description="Review known example rules or build your own. Activate a valid rule set, then test its behavior with the deterministic engine."
-        action={<Badge>No credentials required</Badge>}
+        action={<Badge>AI opt-in · deterministic testing</Badge>}
       />
-      <Alert title="Natural-language extraction is unavailable" tone="info">
-        Policy text is reference material only. No live AI or mock compiler runs
-        here. Editing prose never creates or updates structured rules.
+      <Alert title="Compile, review, then activate" tone="info">
+        NVIDIA extraction runs only after you consent and click Compile. Typing never
+        sends an AI request. Demo and manual rules work without AI access.
       </Alert>
       <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card className="min-w-0 space-y-5 p-5 sm:p-6">
@@ -129,7 +130,7 @@ export function AnalyzeScreen() {
               rows={12}
               maxLength={50_000}
               className="policy-input mt-2 leading-7"
-              placeholder="Paste policy text to inspect it. Create structured rules manually below; automatic extraction is not configured."
+              placeholder="Paste refund or replacement policy text. Compile explicitly, or create structured rules manually below."
               value={draft.text}
               onChange={(e) =>
                 setDraft((old) => ({
@@ -144,7 +145,7 @@ export function AnalyzeScreen() {
             <span>
               {draft.text.length.toLocaleString()} / 50,000 characters
             </span>
-            <span>Reference only · no automatic extraction</span>
+            <span>Live compilation accepts up to 4,000 characters</span>
           </div>
           {draft.referenceEdited && (
             <p className="text-xs leading-5 text-warning">
@@ -158,13 +159,35 @@ export function AnalyzeScreen() {
               document pack above remains the original NovaCart documents.
             </p>
           )}
+          <div className="space-y-4 rounded-lg border border-border bg-bg p-4" aria-busy={compilation.loading}>
+            <h3 className="text-sm font-medium">Compile with NVIDIA</h3>
+            <p className="text-xs leading-6 text-muted">One bounded provider request · 1,536 output tokens · no automatic retry or repair. Review every rule for omissions and meaning before activation.</p>
+            <label className="block text-xs text-muted">Workspace access code
+              <input type="password" autoComplete="off" maxLength={256} className="policy-input mt-1"
+                value={compilation.accessCode} onChange={(e) => compilation.setAccessCode(e.target.value)} />
+            </label>
+            <p className="text-xs text-muted">Provided by the workspace owner; held in memory for this session. Provider credentials stay on the backend.</p>
+            <label className="flex min-h-11 items-center gap-3 text-xs leading-6">
+              <input type="checkbox" checked={compilation.consent} onChange={(e) => compilation.setConsent(e.target.checked)} />
+              I authorize one paid compilation of this policy.
+            </label>
+            <Button loading={compilation.loading} disabled={!compilation.consent || !compilation.accessCode || !draft.name.trim() || !draft.text.trim() || draft.text.length > 4000}
+              onClick={compilation.run}>Compile with NVIDIA</Button>
+            {compilation.loading && <p role="status" className="text-xs text-muted">Compiling once. Editing or leaving this draft discards the response but may not cancel provider billing.</p>}
+            {compilation.error && <Alert title="Compilation did not replace your rules">{compilation.error}</Alert>}
+            {draft.mode === "ai" && draft.compilation && <div role="status" className="space-y-2 text-xs leading-6 text-success">
+              <p>{draft.referenceEdited ? "Previous compiled rules retained; the edited policy text has not been validated." : "Compilation validated · review the draft, then activate."}</p>
+              <p className="break-words text-muted">{draft.compilation.model} · request {draft.compilation.requestId}</p>
+              <p className="break-words text-muted">Usage: {JSON.stringify(draft.compilation.usage.provider_usage ?? null)}</p>
+            </div>}
+          </div>
           {draft.mode === "manual" ? (
             <StructuredRuleEditor />
           ) : (
             <div className="rounded-lg border border-border bg-bg p-4 text-xs leading-6 text-muted">
-              Demo rules are predefined repository fixtures, not freshly
+              {draft.mode === "ai" ? "AI rules were validated locally. Choose Custom structured rules to make manual edits; edited rules are labeled manual." : <>Demo rules are predefined repository fixtures, not freshly
               generated AI output. Choose Custom structured rules to edit them
-              or add a rule.
+              or add a rule.</>}
             </div>
           )}
         </Card>
@@ -178,7 +201,7 @@ export function AnalyzeScreen() {
                 </h2>
               </div>
               <Badge tone={active?.origin === "manual" ? "info" : "primary"}>
-                {active?.origin === "manual" ? "Manual rules" : "Demo Policy"}
+                {active?.origin === "ai" ? "AI compiled" : active?.origin === "manual" ? "Manual rules" : "Demo Policy"}
               </Badge>
             </div>
             {active && (
@@ -284,7 +307,7 @@ export function AnalyzeScreen() {
                   ))}
                 </select>
               </label>
-              <RuleInspector rule={selected} manual={draft.mode === "manual"} />
+              <RuleInspector rule={selected} manual={draft.mode === "manual"} aiCompiled={draft.mode === "ai"} />
             </div>
           )}
         </div>

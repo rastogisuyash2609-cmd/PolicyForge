@@ -10,11 +10,16 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Literal
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
+from fastapi.exceptions import RequestValidationError
+from starlette.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+from policyforge.live_compile import compile_live
+from policyforge.request_limits import RequestBodyLimit
 
 from policyforge.models import (
     Rule,
@@ -58,14 +63,20 @@ app = FastAPI(
     description="CI/CD for business policies: compile, simulate, stress test, shrink, and diff.",
     version="1.0.0",
 )
+app.add_middleware(RequestBodyLimit)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[s.strip() for s in os.getenv("POLICYFORGE_CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if s.strip() and s.strip() != "*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization", "Idempotency-Key"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def safe_request_validation(request: Any, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": {"code": "input_validation", "message": "Request fields are missing, invalid or too large. No inference was performed."}})
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "novacart"
 BENCHMARK_DIR = Path(__file__).resolve().parent.parent.parent / "benchmark"
@@ -76,11 +87,13 @@ BENCHMARK_DIR = Path(__file__).resolve().parent.parent.parent / "benchmark"
 # ---------------------------------------------------------------------------
 
 class CompileRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     documents: dict[str, str] | None = None
     document_text: str | None = None
     doc_name: str | None = "policy.md"
-    max_repairs: int = 2
+    max_repairs: Literal[0] = 0
     use_mock: bool = False
+    live: bool = False
 
 
 class SimulateRequest(BaseModel):
@@ -201,7 +214,18 @@ def get_default_data():
 
 
 @app.post("/api/compile")
-def compile_policy(req: CompileRequest):
+def compile_policy(req: CompileRequest, authorization: str | None = Header(default=None),
+                   idempotency_key: str | None = Header(default=None)):
+    if req.use_mock:
+        if req.live:
+            raise HTTPException(422, {"code": "mode", "message": "Choose either explicit fixture mode or live compilation."})
+        return _compile_mock_policy(req)
+    if req.documents is not None:
+        raise HTTPException(422, {"code": "input", "message": "Live compilation accepts one document_text, not a document batch."})
+    return compile_live(req.document_text or "", req.doc_name or "policy.md", idempotency_key, authorization, req.live)
+
+
+def _compile_mock_policy(req: CompileRequest):
     """Compile policy documents into structured rules with grounding checks, linting, and coverage."""
     client = LLMClient()
     if req.use_mock or not client.api_key:

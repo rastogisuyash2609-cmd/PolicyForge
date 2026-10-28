@@ -2,6 +2,10 @@
 
 Next.js 14, React 18, TypeScript, Tailwind CSS 3, Framer Motion, and Lucide.
 
+Phase 8 adds explicit, guarded NVIDIA compilation to the existing Analyze screen.
+See [the integration report](../docs/PHASE8.md) and [deployment preparation](../docs/DEPLOYMENT.md).
+Live AI defaults OFF. Public deployment is blocked by the recorded dependency audit.
+
 ## Run locally
 
 From this directory, run `npm ci`, then `npm run dev`. The application uses
@@ -16,11 +20,11 @@ python -m uvicorn policyforge.api:app --host 127.0.0.1 --port 8000
 ```
 
 The public landing page is `/`. `/workspace` redirects to `/workspace/issues`;
-`/workspace/analyze` provides offline policy input, structured rule editing, and
+`/workspace/analyze` provides opt-in AI compilation, offline structured rule editing, and
 scenario execution. `/workspace/policies` displays the active rules; Issues uses
 those same rules for real suite and simulation requests. `/workspace/what-if`
 compares explicit fixture rule sets or an explicitly captured active-policy snapshot.
-Other screens remain unmounted.
+Stress Testing and Reports use the same active revision and deterministic results.
 
 `app/workspace/layout.tsx` owns a persistent WorkspaceProvider and WorkspaceShell.
 The provider loads fixtures once and retains the editor draft, active policy,
@@ -57,12 +61,14 @@ AbortSignal support and timeouts (30 seconds for GET/simulate; 60 for suite,
 shrink and diff). ApiError exposes kind/status/diagnostics for developers; raw
 500 exception details are not displayed to users. GET requests omit Content-Type
 to avoid unnecessary CORS preflight. Fixture status does not claim that all
-endpoints work. The legacy compile method rejects locally without a request.
+endpoints work. Compile requires an explicit click, per-request consent and a separate
+workspace access code; its client timeout is 40 seconds and no retry is automatic.
 
-Policy text is reference material only. No automatic prose extraction, mock
-compilation, Nebius configuration, credential access, or external inference is
-performed by this workflow. Demo fixtures are labelled; modifying rules marks
-them manual. Manual source text is user-supplied and is not independently verified.
+Typing never triggers extraction. The backend alone holds Nebius credentials.
+On explicit Compile, it validates one bounded whole-document extraction; rules
+remain a draft until review and activation. Failed/stale responses preserve prior
+rules. Demo fixtures are labelled; modifying rules marks them manual. Manual
+source text is user-supplied and is not independently verified.
 The v2 rule fixture has revised clauses; the document pack remains the original
 NovaCart documents and the UI warns about this distinction.
 

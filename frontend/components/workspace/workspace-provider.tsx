@@ -15,6 +15,7 @@ import { useIssuesAnalysis } from "@/lib/use-issues-analysis";
 import { usePolicyComparison } from "@/lib/use-policy-comparison";
 import { usePolicySimulation } from "@/lib/use-policy-simulation";
 import { useStressTest } from "@/lib/use-stress-test";
+import { usePolicyCompilation } from "@/lib/use-policy-compilation";
 import {
   activateDraft,
   demoDraft,
@@ -25,6 +26,7 @@ import {
 } from "@/lib/policy-domain";
 
 type WorkspaceState = {
+  compilation: ReturnType<typeof usePolicyCompilation>;
   defaultData: DefaultData | null;
   loading: boolean;
   error: string | null;
@@ -58,6 +60,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [attempt, setAttempt] = useState(0);
   const [active, setActive] = useState<ActivePolicy | null>(null);
   const [draft, setDraft] = useState<PolicyDraft>(emptyDraft);
+  const compilation = usePolicyCompilation(draft, setDraft);
   const revision = useRef(0);
   const [activationErrors, setActivationErrors] = useState<string[]>([]);
   const [scenarioJson, setScenarioJson] = useState(
@@ -125,6 +128,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       key={scope}
       workspace={{
         defaultData,
+        compilation,
         loading,
         error,
         retry,

@@ -6,10 +6,11 @@ import {
 } from "./policy-domain";
 export type RuleSnapshot = {
   name: string;
-  origin: "demo" | "manual";
+  origin: "demo" | "manual" | "ai";
   revision: number;
   fingerprint: string;
   rules: PolicyRule[];
+  compilation?: ActivePolicy["compilation"];
 };
 export type RuleIdentity = {
   label: string;
@@ -36,6 +37,7 @@ export function capturePolicy(active: ActivePolicy): RuleSnapshot {
     revision: active.revision,
     fingerprint: active.fingerprint,
     rules: JSON.parse(JSON.stringify(active.rules)) as PolicyRule[],
+    compilation: active.compilation ? JSON.parse(JSON.stringify(active.compilation)) as ActivePolicy["compilation"] : undefined,
   };
 }
 export function buildComparison(

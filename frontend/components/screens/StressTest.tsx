@@ -187,7 +187,7 @@ export function StressTest() {
                 {active.rules
                   .filter((r) => item.finding.rule_ids.includes(r.id))
                   .map((rule) => (
-                    <RuleInspector key={rule.id} rule={rule} />
+                    <RuleInspector key={rule.id} rule={rule} manual={active?.origin === "manual"} aiCompiled={active?.origin === "ai"} />
                   ))}
               </div>
             </Disclosure>

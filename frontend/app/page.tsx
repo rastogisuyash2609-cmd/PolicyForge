@@ -351,8 +351,8 @@ export default function Home() {
               </h3>
               <p className="mt-1 text-sm leading-6 text-muted">
                 Compare demo rule sets or an explicit active-policy snapshot in
-                What-if. Automatic natural-language extraction remains
-                unavailable.
+                What-if. Natural-language extraction is opt-in through the
+                Analyze workspace.
               </p>
             </div>
             <Badge className="shrink-0 self-start">Comparison available</Badge>

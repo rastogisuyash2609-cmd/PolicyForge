@@ -1,6 +1,7 @@
 import type { Decoder } from "./http-client";
 import type {
   DefaultData,
+  CompileResponse,
   DiffResponse,
   Finding,
   HealthResponse,
@@ -74,6 +75,22 @@ export const ruleContract: Decoder<PolicyRule> = shape({
   overrides: strings,
   source: shape({ doc_name: str, verbatim_sentence: str }),
   state_updates: optional(nullable(record)),
+});
+export const compileContract: Decoder<CompileResponse> = shape({
+  mode: literal(["live"] as const), model: str, request_id: str,
+  provider_requests: count, finish_reason: literal(["stop"] as const),
+  total_clauses: count, mapped_clauses: count, unmapped_clauses: array(shape({
+    id: str, text: str, doc_name: str, line_number: integer,
+  })),
+  compiled_rules: array(ruleContract),
+  rule_confidence: (v, p) => {
+    const input = record(v, p);
+    const decoder = shape({rule_id: str, grounded: bool, lint_clean: bool,
+      confidence: literal(["HIGH", "MEDIUM", "LOW"] as const), notes: strings});
+    return Object.fromEntries(Object.entries(input).map(([k, value]) => [k, decoder(value, `${p}.${k}`)]));
+  },
+  rejected_rules: array(record), lint_warnings: strings, token_usage: record,
+  latency_ms: num, summary: str,
 });
 const event = shape({
   event_type: str,

@@ -56,6 +56,10 @@ export function ReportView({ report }: { report: AnalysisReport }) {
             </div>
           ))}
         </div>
+        {report.workspace_session.compilation && <p className="break-words text-xs leading-6 text-muted">
+          Active-policy extraction: {report.workspace_session.compilation.model} · request {report.workspace_session.compilation.requestId}.
+          Provider usage: {JSON.stringify(report.workspace_session.compilation.usage.provider_usage ?? null)}. Testing below is deterministic.
+        </p>}
         <p className="break-words text-sm leading-7 text-muted">
           {report.scope}. Default decision: {report.default_decision}. Workspace
           session rev {report.workspace_session.revision}; analyzed rule sets
