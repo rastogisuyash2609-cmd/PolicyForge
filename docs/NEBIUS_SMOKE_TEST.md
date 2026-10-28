@@ -1,6 +1,7 @@
-# Phase 7 — controlled live smoke test preparation
+# Phase 7C — controlled live smoke test preparation
 
-**No live Nebius API request has been made during preparation.** This is a CLI
+**No additional live Nebius API request has been made during Phase 7C.** The first
+approved test exhausted its old 512-token budget and failed safely. This is a CLI
 runner, independent of FastAPI and the frontend. Do not execute its live flag
 until the user explicitly approves the test.
 
@@ -10,7 +11,7 @@ Module: `backend/policyforge/nebius_smoke.py`
 
 - Synthetic input only: `Customers may request a refund within 30 days of delivery.`
 - Existing PolicyCompiler and existing Pydantic Rule IR; one clause and one rule.
-- Output limit: **512 tokens**, sent as `max_tokens=512` (including any provider
+- Output limit: **1536 tokens**, sent as `max_tokens=1536` (including any provider
   reasoning tokens charged against that cap). One non-streaming completion.
 - SDK/HTTP timeout: **30 seconds**. HTTPX timeouts are per network operation,
   not a promise of an exact wall-clock deadline or of zero cost on a timeout.
@@ -51,10 +52,11 @@ The runner requires all three explicit Nebius settings and an approved HTTPS
 Nebius endpoint/NVIDIA Nemotron model ID. It does not fall back to an OpenAI key
 or a mock compiler if Nebius credentials are missing.
 
-The local configuration currently matches the documented NVIDIA Nemotron Nano
-selection. This is a configuration check, not a claim that provider credentials,
-account access or inference have been verified. Preparation performs no model-list
-or other Nebius API request.
+The configured model is `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`. The first approved
+test established authentication/model access; Phase 7C checks configuration locally
+and performs no model-list or other Nebius API request. Reasoning remains at the
+provider default: no model-specific Nebius thinking toggle was verified. See
+[the diagnosis and pricing assumptions](NEBIUS_TRUNCATION_FIX.md).
 
 No credential argument is accepted. Keys use SecretStr internally, are excluded
 from configuration repr/results, and are never placed in prompts or report fields.
@@ -64,7 +66,10 @@ validated fields or errors are redacted. Unknown CLI arguments are not echoed.
 
 The report includes configured model, status, validation, limits, attempted request
 count, validated rules or sanitized errors, completion finish reason and provider
-token usage when returned. Missing usage is `null`, not zero. A failed/timeout
+token usage when returned. It also reports a numeric reasoning-token count if the
+provider supplies `completion_tokens_details.reasoning_tokens`, plus visible-output
+character count. It never returns reasoning text. Missing usage or reasoning counts
+are `null`, not zero. A failed/timeout
 attempt may still have incurred provider cost; no inference-cost claim is made
 without reliable usage and current pricing. No report is automatically uploaded
 or persisted.
@@ -116,9 +121,21 @@ Normal pytest retains `-m "not live"` by default. Do not use `pytest -m live` or
 the old PONG integration test as a substitute: those do not enforce this runner's
 bounded single-clause extraction contract.
 
-Preparation results (2026-10-29): **32 new offline smoke tests passed**; full
-offline backend regression **152 passed, 2 deselected** (live-provider test and
-API compile-route test). Default CLI preflight confirmed configuration present,
-status `prepared_live_disabled`, validation `not_run`, request count **0**, token
-usage `null`. Root `.env` remains Git-ignored and untracked. No provider request,
-live validation, token consumption or live authentication check was performed.
+Phase 7C results (2026-10-29): **43 offline smoke tests passed**; full backend
+regression **164 passed, 1 deselected** (the live-provider test). The existing
+API compile test is included with `use_mock=True`. `tests/conftest.py` blocks real
+synchronous/asynchronous HTTPX transports for every non-live test, even when a
+real key is configured. Frontend regression: **58 passed**.
+
+Run the full offline backend suite with:
+
+```powershell
+$env:PYTHONPATH = Join-Path (Get-Location) 'backend'
+& 'C:\Users\Suyash Rastogi\AppData\Local\Temp\policyforge-venv\Scripts\python.exe' -m pytest tests -q
+```
+
+Default CLI preflight confirmed configuration present, status
+`prepared_live_disabled`, validation `not_run`, request count **0**, cap **1536**,
+token usage `null`. Root `.env` remains Git-ignored. Zero additional provider
+requests or paid calls occurred. The revised cap/prompt have not been live-tested;
+another inference still requires explicit approval.

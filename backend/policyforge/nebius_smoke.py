@@ -28,7 +28,7 @@ from policyforge.models import Rule
 
 POLICY_TEXT = "Customers may request a refund within 30 days of delivery."
 DOC_NAME = "synthetic_refund.md"
-MAX_OUTPUT_TOKENS = 512
+MAX_OUTPUT_TOKENS = 1536
 TIMEOUT_SECONDS = 30.0
 MAX_PROVIDER_REQUESTS = 1
 ALLOWED_HOSTS = frozenset({
@@ -97,6 +97,32 @@ class SmokeEnvelope(BaseModel):
     rules: list[Rule] = Field(min_length=1, max_length=1)
 
 
+def build_smoke_messages() -> list[ChatCompletionMessageParam]:
+    """Compact extraction instructions for the fixed refund input only.
+
+    This narrows the prompt vocabulary, not the shared Rule schema. No answer,
+    threshold, extra business conditions or default-denial rule is supplied.
+    """
+    return [
+        {"role": "system", "content": (
+            'Extract the policy into JSON only: {"rules":[<one rule>]}. '
+            'Required rule fields: id and name (short strings), decision '
+            '(REFUND), trigger (REFUND_REQUESTED), effect (ALLOW or DENY), '
+            'when, source. when is a leaf {"field":...,"op":...,"value":...} '
+            'or nested {"all":[...]} / {"any":[...]}. Relevant fields: '
+            'item_delivered (boolean), days_since_delivery (integer). '
+            'Ops: IS_TRUE, IS_FALSE, EQ, NEQ, LT, LTE, GT, GTE. '
+            'Extract the stated time limit and outcome; add no unstated '
+            'eligibility, exceptions, state changes or denial rules. '
+            'source requires doc_name copied from Document and '
+            'verbatim_sentence copied exactly from Policy. Omit optional '
+            'defaults priority, overrides and state_updates. No extra fields, '
+            'explanation, markdown or reasoning text.'
+        )},
+        {"role": "user", "content": f"Document: {DOC_NAME}\nPolicy: {POLICY_TEXT}"},
+    ]
+
+
 class SingleRequestClient(LLMClient):
     """Narrow LLMClient adapter; the general wrapper and its retry loop are unused."""
 
@@ -111,6 +137,8 @@ class SingleRequestClient(LLMClient):
         self._lock = Lock()
         self.usage: dict[str, int] | None = None
         self.finish_reason: str | None = None
+        self.reasoning_tokens: int | None = None
+        self.visible_output_characters: int | None = None
         self._transport = transport
         self._http = httpx.Client(
             transport=transport, timeout=TIMEOUT_SECONDS,
@@ -132,22 +160,17 @@ class SingleRequestClient(LLMClient):
             self._used = True
         if (response_format != {"type": "json_object"} or temperature != 0.0
                 or len(messages) != 2 or messages[0].get("role") != "system"
-                or messages[1].get("role") != "user"):
+                or messages[1].get("role") != "user"
+                or POLICY_TEXT not in messages[1].get("content", "")):
             raise SmokeGuardError("Only the fixed JSON extraction operation is allowed.")
-        instruction = messages[0]["content"] + (
-            "\nReturn exactly one compact rule. Required fields: id (string), name "
-            "(string), decision, trigger, when, effect, source. Optional defaults: "
-            "priority=0, overrides=[], state_updates=null. Copy source.doc_name "
-            "from the input. No reasoning, prose, or extra fields."
-        )
-        prompt: list[ChatCompletionMessageParam] = [
-            {"role": "system", "content": instruction},
-            {"role": "user", "content": messages[1]["content"]},
-        ]
+        prompt = build_smoke_messages()
         assert self._client is not None
         response = self._client.chat.completions.create(
             model=self.model, messages=prompt, temperature=0.0,
             response_format={"type": "json_object"},
+            # Keep the already accepted Nebius parameter. NVIDIA's model card
+            # alone does not establish Nebius support for chat_template_kwargs
+            # or model-specific reasoning_effort. No speculative override/fallback.
             max_tokens=MAX_OUTPUT_TOKENS, n=1, stream=False,
         )
         if response.usage is not None:
@@ -156,10 +179,14 @@ class SingleRequestClient(LLMClient):
                 "completion_tokens": response.usage.completion_tokens,
                 "total_tokens": response.usage.total_tokens,
             }
+            details = response.usage.completion_tokens_details
+            if details is not None:
+                self.reasoning_tokens = details.reasoning_tokens
         if len(response.choices) != 1:
             raise SmokeGuardError("The provider did not return exactly one completion.")
         choice = response.choices[0]
         self.finish_reason = choice.finish_reason
+        self.visible_output_characters = len(choice.message.content or "")
         if choice.finish_reason != "stop" or choice.message.refusal:
             raise SmokeGuardError("The completion was truncated, refused, or incomplete; no retry.")
         # Local validation only. Invalid JSON/schema output ends this run here.
@@ -211,6 +238,8 @@ def run_smoke(
         "sdk_retries": 0, "wrapper_retries": 0, "compiler_repairs": 0,
         "max_provider_requests": MAX_PROVIDER_REQUESTS, "provider_requests": 0,
         "token_usage": None, "validated_rules": [], "errors": [],
+        "reasoning_configuration": "provider_default_no_verified_override",
+        "reasoning_tokens": None, "visible_output_characters": None,
     }
     client: SingleRequestClient | None = None
     guard: OneRequestTransport | None = None
@@ -253,6 +282,8 @@ def run_smoke(
         if client is not None:
             report["token_usage"] = client.usage
             report["finish_reason"] = client.finish_reason
+            report["reasoning_tokens"] = client.reasoning_tokens
+            report["visible_output_characters"] = client.visible_output_characters
             with quiet_provider_logs():
                 try:
                     client.close()

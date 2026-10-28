@@ -2,6 +2,8 @@
 
 from concurrent.futures import ThreadPoolExecutor
 import json
+import logging
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -14,6 +16,7 @@ from policyforge.compiler import PolicyCompiler
 from policyforge.models import Rule
 
 OFFLINE_SECRET = "offline-unit-test-secret-never-a-real-credential"
+FIXTURES = Path(__file__).parent / "fixtures" / "nebius_smoke"
 
 
 @pytest.fixture(autouse=True)
@@ -66,7 +69,7 @@ def test_default_preflight_never_constructs_sdk_or_sends_http(
     assert result["status"] == "prepared_live_disabled"
     assert result["provider_requests"] == 0
     assert result["validation"] == "not_run"
-    assert result["max_output_tokens"] == 512
+    assert result["max_output_tokens"] == 1536
     assert result["timeout_seconds"] == 30.0
     assert result["sdk_retries"] == result["wrapper_retries"] == result["compiler_repairs"] == 0
     assert OFFLINE_SECRET not in json.dumps(result)
@@ -99,13 +102,17 @@ def test_success_uses_one_bounded_request_and_existing_compiler(
         body = json.loads(request.content)
         assert request.method == "POST"
         assert request.url.path == "/v1/chat/completions"
-        assert body["max_tokens"] == 512
+        assert body["max_tokens"] == 1536
         assert body["n"] == 1 and body["stream"] is False
         assert body["temperature"] == 0
         assert body["model"] == configuration.model
         assert body["response_format"] == {"type": "json_object"}
         assert len(body["messages"]) == 2
         assert smoke.POLICY_TEXT in body["messages"][1]["content"]
+        assert body["messages"] == smoke.build_smoke_messages()
+        assert "chat_template_kwargs" not in body and "reasoning_effort" not in body
+        assert "extra_body" not in body
+        assert OFFLINE_SECRET not in json.dumps(body)
         assert set(request.extensions["timeout"].values()) == {30.0}
         return completion(json.dumps({"rules": [valid_rule()]}))
     result = smoke.run_smoke(execute=True, configuration=configuration,
@@ -299,3 +306,105 @@ def test_configuration_refuses_unsafe_provider_endpoint(endpoint: str) -> None:
     with pytest.raises(smoke.SmokeGuardError):
         smoke.SmokeConfiguration(model='nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B',
                                  base_url=endpoint, api_key=SecretStr(OFFLINE_SECRET))
+
+
+@pytest.mark.parametrize("filename,finish,expected", [
+    ("valid_policy_ir.json", "stop", "succeeded"),
+    ("truncated_policy_ir.txt", "stop", "failed"),
+    ("truncated_policy_ir.txt", "length", "failed"),
+    ("valid_policy_ir.json", "length", "failed"),
+])
+def test_saved_json_fixtures_are_validated_locally_once(
+    configuration: smoke.SmokeConfiguration, filename: str, finish: str, expected: str,
+) -> None:
+    content = (FIXTURES / filename).read_text(encoding="utf-8")
+    calls: list[httpx.Request] = []
+    def handle(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return completion(content, finish=finish)
+    result = smoke.run_smoke(execute=True, configuration=configuration,
+                            offline_transport=httpx.MockTransport(handle))
+    assert result["status"] == expected
+    assert len(calls) == result["provider_requests"] == 1
+    assert result["visible_output_characters"] == len(content)
+    if expected == "failed":
+        assert result["validated_rules"] == []
+    else:
+        rule = result["validated_rules"][0]
+        assert rule["priority"] == 0 and rule["overrides"] == []
+        assert rule["state_updates"] is None
+
+
+def test_observed_first_call_metadata_replayed_with_synthetic_partial_json(
+    configuration: smoke.SmokeConfiguration,
+) -> None:
+    metadata = json.loads((FIXTURES / "first_live_metadata.json").read_text(encoding="utf-8"))
+    # Only metadata is historical. This partial JSON is an offline test fixture,
+    # not an assertion about what the original model actually generated.
+    content = (FIXTURES / "truncated_policy_ir.txt").read_text(encoding="utf-8")
+    response = json.loads(completion(content, finish=metadata["finish_reason"]).content)
+    response["usage"] = metadata["usage"]
+    result = smoke.run_smoke(execute=True, configuration=configuration,
+        offline_transport=httpx.MockTransport(lambda request: httpx.Response(200, json=response)))
+    assert result["status"] == "failed" and result["validation"] == "not_run"
+    assert result["token_usage"] == metadata["usage"]
+    assert result["reasoning_tokens"] is None
+    assert result["provider_requests"] == 1
+
+
+@pytest.mark.parametrize("reasoning_tokens", [None, 0, 96])
+def test_reasoning_telemetry_is_numeric_only_and_never_fabricated(
+    configuration: smoke.SmokeConfiguration, reasoning_tokens: int | None,
+    caplog: pytest.LogCaptureFixture, capsys: CaptureFixture[str],
+) -> None:
+    content = (FIXTURES / "valid_policy_ir.json").read_text(encoding="utf-8")
+    data = json.loads(completion(content).content)
+    if reasoning_tokens is not None:
+        data["usage"]["completion_tokens_details"] = {"reasoning_tokens": reasoning_tokens}
+    data["choices"][0]["message"]["reasoning_content"] = "private reasoning " + OFFLINE_SECRET
+    def handle(request: httpx.Request) -> httpx.Response:
+        logging.getLogger("httpx").critical(OFFLINE_SECRET)
+        return httpx.Response(200, json=data)
+    result = smoke.run_smoke(execute=True, configuration=configuration,
+                            offline_transport=httpx.MockTransport(handle))
+    assert result["reasoning_tokens"] == reasoning_tokens
+    assert result["reasoning_configuration"] == "provider_default_no_verified_override"
+    assert result["provider_requests"] == 1 and result["validation"] == "passed"
+    assert "private reasoning" not in json.dumps(result)
+    assert OFFLINE_SECRET not in json.dumps(result) + caplog.text + repr(capsys.readouterr())
+
+
+def test_compact_prompt_preserves_required_fields_without_supplying_answer() -> None:
+    from policyforge.compiler import _build_system_prompt
+    messages = smoke.build_smoke_messages()
+    instruction = str(messages[0]["content"])
+    assert len(instruction) < len(_build_system_prompt())
+    assert "30" not in instruction
+    for name, field in Rule.model_fields.items():
+        if field.is_required():
+            assert name in instruction
+    assert "IS_FINAL_SALE" not in instruction
+    # Size evidence only: bytes/characters are not exact model token counts.
+    compact = (FIXTURES / "valid_policy_ir.json").read_text(encoding="utf-8").strip()
+    assert len(compact.encode("utf-8")) < 512
+    smoke.SmokeEnvelope.model_validate_json(compact)
+
+
+def test_other_policy_input_is_blocked_before_network(configuration: smoke.SmokeConfiguration) -> None:
+    guard = smoke.OneRequestTransport(configuration.base_url,
+        httpx.MockTransport(lambda request: pytest.fail("Unexpected request")))
+    client = smoke.SingleRequestClient(configuration, guard)
+    try:
+        with pytest.raises(smoke.SmokeGuardError, match="fixed JSON extraction"):
+            client.chat_complete([
+                {"role": "system", "content": "Extract"},
+                {"role": "user", "content": "A different policy."},
+            ], response_format={"type": "json_object"})
+        assert guard.attempts == 0
+    finally:
+        client.close()
+
+
+def test_offline_suite_blocks_real_http_transport() -> None:
+    with pytest.raises(AssertionError, match="HTTP.*(forbidden|prohibited)"):
+        httpx.HTTPTransport().handle_request(httpx.Request("GET", "https://example.invalid"))

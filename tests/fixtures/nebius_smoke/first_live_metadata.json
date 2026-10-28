@@ -1,0 +1,7 @@
+{
+  "provenance": "User-reported first live test metadata; original content and reasoning were not retained. This is not a saved provider response.",
+  "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+  "finish_reason": "length",
+  "usage": {"prompt_tokens": 637, "completion_tokens": 512, "total_tokens": 1149},
+  "provider_requests": 1
+}

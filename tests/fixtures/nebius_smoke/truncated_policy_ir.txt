@@ -1,0 +1,1 @@
+{"rules":[{"id":"refund_30_days","name":"Refund within 30 days","decision":"REFUND","trigger":"REFUND_REQUESTED","effect":"ALLOW","when":{"all":[{"field":"item_delivered","op":"IS_TRUE","value":true},{"field":"days_since_delivery","op":"LTE","value":30}]},"source":{"doc_name":"synthetic_refund.md","verbatim_sentence":"Customers may request
