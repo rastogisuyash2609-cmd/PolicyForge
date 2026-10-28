@@ -1,10 +1,11 @@
 # PolicyForge frontend
 
-Next.js 14, React 18, TypeScript, Tailwind CSS 3, Framer Motion, and Lucide.
+Next.js 15.5.28, React 18, TypeScript, Tailwind CSS 3, Framer Motion, and Lucide.
 
 Phase 8 adds explicit, guarded NVIDIA compilation to the existing Analyze screen.
 See [the integration report](../docs/PHASE8.md) and [deployment preparation](../docs/DEPLOYMENT.md).
-Live AI defaults OFF. Public deployment is blocked by the recorded dependency audit.
+Live AI defaults OFF. [Phase 9A](../docs/PHASE9A.md) clears the six recorded dependency
+findings; public-service deployment prerequisites remain in the deployment guide.
 
 ## Run locally
 

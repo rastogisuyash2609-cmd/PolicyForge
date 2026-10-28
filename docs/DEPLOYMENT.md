@@ -1,14 +1,24 @@
 # Deployment preparation — not deployed
 
-Public deployment is **blocked** by the existing frontend dependency audit:
-`SECURITY_AUDIT_PHASE8.json` reports 6 findings (1 critical, 4 high, 1 moderate),
-including Next.js 14.2.15. Resolve these with a supported framework/dependency
-upgrade and rerun all validation before internet exposure. No automatic major
-upgrade, push, merge, tunnel, cloud release or public binding occurred here.
+Phase 9A clears the six identified frontend dependency findings. The refreshed
+full and production npm audits and Python audits report zero known vulnerabilities;
+see [PHASE9A.md](PHASE9A.md) and its saved audit evidence. Next.js is pinned to
+15.5.28, with its PostCSS dependency overridden to the already-used 8.5.30.
+This removes the identified dependency release blocker, not the public-service
+authentication, durable quota, TLS and ingress prerequisites below. Nothing has
+been pushed, merged, deployed or publicly bound.
 
 ## Local frontend and backend
 
 Use Node.js with the checked-in npm lockfile, and Python 3.11. From the project root:
+
+Phase 9A was verified on Windows with Node.js 22.19.0 and npm 10.9.3. The frontend
+still has its existing Windows-only direct SWC dependency (now aligned to Next.js).
+For Linux hosting, remove that redundant direct dependency and let Next.js install
+its platform-specific optional SWC package, then validate a clean install/build on
+the target platform. Linux deployment has not been verified. Python manifests pin
+direct dependencies; transitive versions can change on a fresh install, so audit
+the actual release environment as well.
 
 ```powershell
 python -m venv .venv
@@ -98,8 +108,9 @@ credentials and remains available with live compilation disabled.
 ## Validation and release checklist
 
 Run backend pytest (default excludes live), frontend unit and local API integration
-tests, typecheck, lint, build, secret scans and npm audit. The security audit must
-be resolved, not silently ignored. Use the test-only browser harness for mocked
+tests, typecheck, lint, build, secret scans, full and production npm audits, and
+pip-audit for the deployed Python environment. Repeat audits at release time;
+Phase 9A results are a dated advisory-database snapshot. Use the test-only browser harness for mocked
 Compile → review → activate → stress/What-if → report checks. Never deploy
 `tests/browser_mock_api.py` or include its test-only stats route in production.
 
