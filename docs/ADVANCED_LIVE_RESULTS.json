@@ -141,8 +141,15 @@
         ],
         "ambiguous_acceptance": null
       },
-      "execution": "NOT_RUN",
-      "actual_output": null,
+      "execution": "UNCONFIRMED",
+      "actual_output": {
+        "observation": "Retained sanitized summary of backend session 33065 recorded one POST /api/compile HTTP 200. Request mode, submitted policy and response body were not retained.",
+        "request_mode": null,
+        "compiled_rules": null,
+        "actual_input_policy": null,
+        "caller": null,
+        "request_timestamp": null
+      },
       "pydantic_validation": null,
       "grounding_validation": null,
       "semantic_correctness": null,
@@ -153,8 +160,8 @@
       "reasoning_tokens": null,
       "estimated_cost_usd": null,
       "status": "NEEDS REVIEW",
-      "notes": "Offline fixture success is not real Nemotron success.",
-      "http_status": null,
+      "notes": "Correction: HTTP 200 alone cannot prove a live Nebius call because the same route supports explicit use_mock=true. No verified ADV-01 provider result or exact input was recovered. Treat the request as potentially billed; do not automatically repeat or reset a budget. User reports no completed ADV-01 manual steps; current tab has an empty draft and original demo active. Live AI remains disabled.",
+      "http_status": 200,
       "model_used": null,
       "finish_reason": null,
       "request_id": null
@@ -976,5 +983,41 @@
       "finish_reason": null,
       "request_id": null
     }
-  ]
+  ],
+  "pause_record": {
+    "recorded_at_utc": "2026-10-29T04:57:46.565539+00:00",
+    "live_ai_enabled": false,
+    "completed_live_session_provider_requests": null,
+    "pause_provider_requests": 0,
+    "allowance_consumed": null,
+    "new_live_attempt_authorized": false,
+    "backend_health_http": 200,
+    "disabled_gate_http": 503,
+    "env_unchanged": true,
+    "request_budget_note": "Correction: consumption is unconfirmed, not zero. One HTTP 200 was observed, but live/mock mode is unknown. Keep live AI disabled and treat the attempt as potentially billed; do not reset or enable any allowance automatically. In-memory guard counters do not survive restart, and no durable provider ledger exists."
+  },
+  "live_provider_requests_this_phase_scope": "Original offline preparation run only; subsequent authorized ADV-01 live-session consumption is recorded in results and pause_record.",
+  "investigation_record": {
+    "recorded_at_utc": "2026-10-29T09:08:05.291487+00:00",
+    "conclusion": "HTTP 200 observed; real provider call, ADV-01 input, caller and billing unconfirmed. Previous definitive provider/validation claims withdrawn.",
+    "previous_assessment_not_independent_evidence": {
+      "execution": "COMPLETED",
+      "provider_request_count": 1,
+      "pydantic_validation": "PASS (inferred from guarded HTTP 200 endpoint; raw IR unavailable)",
+      "grounding_validation": "PASS (inferred from guarded HTTP 200 endpoint; raw source unavailable)",
+      "http_status": 200
+    },
+    "previous_zero_success_poll_recorded_at_utc": "2026-10-29T04:48:08.202Z",
+    "http_200_summary_recorded_at_utc": "2026-10-29T04:56:43.467Z",
+    "exact_request_timestamp": null,
+    "live_api_route_can_also_return_mock_http_200": true,
+    "current_browser_evidence": "Demo Policy selected; empty name/text; no draft; NovaCart v1 revision 1 active; Compile disabled; retained compile console filter empty. Read-only inspection, no navigation or clicks.",
+    "root_execution_record": "Setup sent only an unauthenticated compile readiness probe (401). No recorded tool calls between the completed setup poll and the pause request; no smoke runner or automated authorized compile identified in this task.",
+    "recovered_provider_response": false,
+    "new_provider_requests": 0,
+    "live_ai_enabled": false,
+    "budget_reset": false,
+    "active_rules_changed": false,
+    "recommended_next_action": "Do not retry automatically. Owner can inspect existing provider usage history without inference, or separately authorize one new explicitly tracked attempt while counting the unknown prior call conservatively."
+  }
 }

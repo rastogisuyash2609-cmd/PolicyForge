@@ -169,13 +169,21 @@ def test_live_tracker_contains_no_fabricated_results() -> None:
         assert actual["input_policy"] == expected["document_text"]
         assert actual["expected_output"]["rules"] == expected["rules"]
         assert actual["status"] in {"PASS", "FAIL", "NEEDS REVIEW"}
-        assert actual["execution"] in {"NOT_RUN", "COMPLETED"}
+        assert actual["execution"] in {"NOT_RUN", "COMPLETED", "UNCONFIRMED"}
         if actual["execution"] == "NOT_RUN":
             assert actual["status"] == "NEEDS REVIEW"
             for field in ("actual_output", "pydantic_validation", "grounding_validation", "semantic_correctness",
                           "deterministic_simulation_result", "provider_request_count", "input_tokens",
                           "output_tokens", "reasoning_tokens", "estimated_cost_usd", "http_status",
                           "model_used", "finish_reason", "request_id"):
+                assert actual[field] is None
+        elif actual["execution"] == "UNCONFIRMED":
+            assert actual["status"] == "NEEDS REVIEW"
+            assert actual["actual_output"] is not None
+            for field in ("provider_request_count", "pydantic_validation", "grounding_validation",
+                          "semantic_correctness", "deterministic_simulation_result", "input_tokens",
+                          "output_tokens", "reasoning_tokens", "estimated_cost_usd", "model_used",
+                          "finish_reason", "request_id"):
                 assert actual[field] is None
         else:
             assert actual["actual_output"] is not None
