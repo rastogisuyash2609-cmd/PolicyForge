@@ -1,5 +1,10 @@
 # Advanced NVIDIA extraction tests — Phase 9C extension
 
+Future authorized tests must opt into the durable local receipt recorder described
+in [COMPILATION_EVIDENCE.md](COMPILATION_EVIDENCE.md). ADV-01's historical status
+remains UNCONFIRMED; the recorder cannot reconstruct it. Preserve real/mock mode,
+actual IR and usage from the new receipt rather than inferring them from HTTP 200.
+
 Prepared on 2026-10-29 from **HEAD 96e7076**, whose parent is **886e090**.
 Preparation only: **zero live provider requests**, no live enablement, no deployment.
 The existing root .env, backend/frontend processes and application code are unchanged.
@@ -334,6 +339,7 @@ smoke CLI, benchmark or live request.
    $env:PYTHONPATH = Join-Path (Get-Location) 'backend'
    $env:POLICYFORGE_ENABLE_LIVE_AI = 'true'
    $env:POLICYFORGE_AI_REQUEST_BUDGET = '1'
+   $env:POLICYFORGE_LIVE_TEST_ID = 'ADV-01'
    & 'C:\Users\Suyash Rastogi\AppData\Local\Temp\policyforge-venv\Scripts\python.exe' -m uvicorn policyforge.api:app --host 127.0.0.1 --port 8000 --workers 1
    ```
 
@@ -356,7 +362,9 @@ smoke CLI, benchmark or live request.
    & 'C:\Users\Suyash Rastogi\AppData\Local\Temp\policyforge-venv\Scripts\python.exe' -m uvicorn policyforge.api:app --host 127.0.0.1 --port 8000 --workers 1
    ```
 
-6. Verify health and disabled gate, update only ADV-01's sanitized live record,
+6. Verify health and disabled gate, inspect the saved local receipt using the
+   read-only commands in COMPILATION_EVIDENCE.md, update only the new attempt's
+   sanitized live record (retain the earlier UNCONFIRMED evidence),
    then review/activate only a semantically valid draft. Run its deterministic
    boundary journeys with live OFF and record findings/revision/replay. A backend
    restart to disable AI does not clear the frontend's in-memory session. Stop and

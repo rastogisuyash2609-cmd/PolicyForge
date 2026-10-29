@@ -19,6 +19,9 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, TypeAdapter,
 from fastapi import HTTPException
 
 from policyforge.compiler import PolicyCompiler
+from policyforge.compile_evidence import (
+    CompileEvidence, EvidenceError, EvidenceStore, ProviderMode, ValidationStatus, configured_test_id,
+)
 from policyforge.llm import LLMClient, LLMCallRecord
 from policyforge.models import Rule, ConditionTree
 from policyforge.provider_safety import (
@@ -98,6 +101,9 @@ class BoundedCompileClient(LLMClient):
         self.call_history: list[LLMCallRecord] = []
         self.usage: dict[str, int] | None = None
         self.finish_reason: str | None = None
+        self.provider_mode: ProviderMode = "nebius" if inner_transport is None else "mock"
+        self.response_received = False
+        self.pydantic_validation: ValidationStatus = "NOT_RUN"
         self.used = False
         self.transport = OneRequestTransport(configuration.base_url, inner_transport if inner_transport is not None else httpx.HTTPTransport(retries=0))
         self.sdk = openai.OpenAI(
@@ -117,6 +123,7 @@ class BoundedCompileClient(LLMClient):
             temperature=0, response_format={"type": "json_object"},
             max_tokens=MAX_OUTPUT_TOKENS, n=1, stream=False,
         )
+        self.response_received = True
         if response.usage is not None:
             self.usage = {"prompt_tokens": response.usage.prompt_tokens,
                           "completion_tokens": response.usage.completion_tokens,
@@ -127,7 +134,13 @@ class BoundedCompileClient(LLMClient):
         self.finish_reason = choice.finish_reason
         if choice.finish_reason != "stop" or choice.message.refusal:
             raise SmokeGuardError("Incomplete model response.")
-        return PolicyEnvelope.model_validate_json(choice.message.content or "").model_dump_json()
+        try:
+            validated = PolicyEnvelope.model_validate_json(choice.message.content or "")
+        except ValidationError:
+            self.pydantic_validation = "FAIL"
+            raise
+        self.pydantic_validation = "PASS"
+        return validated.model_dump_json()
 
     def get_total_usage(self) -> dict[str, Any]:
         return {"call_count": self.transport.attempts, "provider_usage": self.usage}
@@ -139,15 +152,20 @@ class BoundedCompileClient(LLMClient):
 def authorize(authorization: str | None, live: bool) -> int:
     if not live or os.getenv("POLICYFORGE_ENABLE_LIVE_AI", "false").lower() != "true":
         raise HTTPException(503, {"code": "live_disabled", "message": "Live compilation is disabled by the workspace owner. Demo and manual rules remain available."})
+    authorize_workspace(authorization)
+    try:
+        return min(10, max(1, int(os.getenv("POLICYFORGE_AI_REQUEST_BUDGET", "3"))))
+    except ValueError:
+        raise HTTPException(503, {"code": "configuration", "message": "The backend compilation budget is not configured correctly."}) from None
+
+
+def authorize_workspace(authorization: str | None) -> None:
+    """Workspace authorization independent of the live flag; never sends inference."""
     token = os.getenv("POLICYFORGE_COMPILE_TOKEN", "")
     if len(token) < 24 or token == os.getenv("NEBIUS_API_KEY"):
         raise HTTPException(503, {"code": "access_not_configured", "message": "The owner must configure a separate workspace access code."})
     if not authorization or not compare_digest(authorization.encode(), ("Bearer " + token).encode()):
         raise HTTPException(401, {"code": "access_denied", "message": "A valid workspace access code is required."})
-    try:
-        return min(10, max(1, int(os.getenv("POLICYFORGE_AI_REQUEST_BUDGET", "3"))))
-    except ValueError:
-        raise HTTPException(503, {"code": "configuration", "message": "The backend compilation budget is not configured correctly."}) from None
 
 
 def compile_live(text: str, doc_name: str, request_id: str | None,
@@ -166,6 +184,32 @@ def compile_live(text: str, doc_name: str, request_id: str | None,
         raise HTTPException(503, {"code": "credentials_missing", "message": "Backend Nebius credentials, endpoint or model configuration is missing or invalid."}) from None
     client: BoundedCompileClient | None = None
     with gate.reserve(request_id or "", text, budget), quiet_provider_logs():
+        store = EvidenceStore()
+        receipt: CompileEvidence | None = None
+        grounding: ValidationStatus = "NOT_RUN"
+        try:
+            test_id = configured_test_id()
+            if test_id:
+                receipt = store.begin(test_id, request_id or "", "unknown", configuration.model, text)
+        except EvidenceError:
+            raise HTTPException(503, {"code": "evidence_unavailable", "message": "Local evidence could not be reserved. No inference was started; do not retry automatically.",
+                                      "provider_requests": 0}) from None
+
+        def save(rules: list[Rule] | None, error_code: str | None) -> dict[str, str] | None:
+            if receipt is None:
+                return None
+            try:
+                saved = store.finish(receipt, mode=client.provider_mode if client else "unknown",
+                    attempts=client.transport.attempts if client else 0,
+                    response_received=client.response_received if client else False,
+                    rules=rules, pydantic_status=client.pydantic_validation if client else "NOT_RUN",
+                    grounding_status=grounding, usage=client.usage if client else None,
+                    finish_reason=client.finish_reason if client else None, error_code=error_code)
+            except (EvidenceError, ValidationError, OSError):
+                raise HTTPException(503, {"code": "evidence_write_failed", "message": "The final receipt could not be saved. The attempt may be billed; do not retry. Inspect the pending local record.",
+                    "request_id": request_id, "provider_requests": client.transport.attempts if client else 0}) from None
+            return {"request_id": str(saved.request_id), "test_id": saved.test_id, "status": "saved"}
+
         try:
             client = BoundedCompileClient()
             compiler = PolicyCompiler(llm_client=client, max_repairs=0)
@@ -174,7 +218,9 @@ def compile_live(text: str, doc_name: str, request_id: str | None,
             if (report.rejected_rules or report.unmapped_clauses or not rules
                     or any(r.source.doc_name != doc_name for r in rules)
                     or len({r.id for r in rules}) != len(rules)):
+                grounding = "FAIL"
                 raise HTTPException(422, {"code": "grounding_or_rules", "message": "Generated rules failed local grounding or rule validation. Previous rules were preserved; no repair was attempted."})
+            grounding = "PASS"
             result = {
                 "total_clauses": report.total_clauses, "mapped_clauses": report.mapped_clauses,
                 "unmapped_clauses": [], "compiled_rules": [r.model_dump(mode="json") for r in rules],
@@ -183,6 +229,7 @@ def compile_live(text: str, doc_name: str, request_id: str | None,
                 "token_usage": client.get_total_usage(), "latency_ms": round(report.latency_ms, 2),
                 "summary": "One whole-document extraction validated locally. Review rules for omissions and meaning before activation.",
                 "mode": "live", "model": client.model, "request_id": request_id,
+                "provider_mode": client.provider_mode,
                 "finish_reason": client.finish_reason, "provider_requests": client.transport.attempts,
                 "max_output_tokens": MAX_OUTPUT_TOKENS, "timeout_seconds": TIMEOUT_SECONDS,
             }
@@ -190,8 +237,11 @@ def compile_live(text: str, doc_name: str, request_id: str | None,
             if any(secret and json.dumps(secret, ensure_ascii=False)[1:-1] in serialized for secret in (
                     configuration.api_key.get_secret_value(), os.getenv("POLICYFORGE_COMPILE_TOKEN", ""))):
                 raise HTTPException(502, {"code": "unsafe_output", "message": "Unsafe provider output was rejected. No rules were accepted."})
+            result["evidence"] = save(rules, None)
             return result
         except HTTPException as exc:
+            if isinstance(exc.detail, dict) and exc.detail.get("code") == "evidence_write_failed":
+                raise
             error = exc
         except ValidationError:
             error = HTTPException(422, {"code": "invalid_policy_ir", "message": "The model returned invalid JSON or Policy IR. No repair or retry was attempted."})
@@ -200,6 +250,8 @@ def compile_live(text: str, doc_name: str, request_id: str | None,
         except openai.APITimeoutError:
             error = HTTPException(504, {"code": "provider_timeout", "message": "The provider timed out. It may still bill this attempt. Do not immediately repeat it."})
         except openai.APIStatusError as exc:
+            if client is not None:
+                client.response_received = True
             code, message = {
                 401: ("provider_auth", "Backend Nebius authentication failed; contact the workspace owner."),
                 403: ("model_access", "Backend model access was denied; contact the workspace owner."),
@@ -222,5 +274,7 @@ def compile_live(text: str, doc_name: str, request_id: str | None,
                 except Exception:
                     pass
         error.detail.update(request_id=request_id, provider_requests=client.transport.attempts if client else 0,
-                            token_usage=client.get_total_usage() if client else None)
+                            token_usage=client.get_total_usage() if client else None,
+                            provider_mode=client.provider_mode if client else "unknown",
+                            evidence=save(None, error.detail["code"]))
         raise error from None

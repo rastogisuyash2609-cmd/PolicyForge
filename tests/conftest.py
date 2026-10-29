@@ -11,6 +11,9 @@ def prohibit_provider_network(request: pytest.FixtureRequest, monkeypatch: pytes
     """Keep MockTransport/TestClient usable; explicit live tests remain opt-in."""
     if request.node.get_closest_marker("live") is not None:
         return
+    # An operator's opt-in recording session must not make ordinary tests write
+    # receipts into the real local evidence store. Evidence tests choose tmp_path.
+    monkeypatch.delenv("POLICYFORGE_LIVE_TEST_ID", raising=False)
 
     def blocked(*args: Any, **kwargs: Any) -> Any:
         raise AssertionError("Real HTTP transport is forbidden in offline tests.")

@@ -18,7 +18,9 @@ from fastapi.exceptions import RequestValidationError
 from starlette.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ConfigDict
-from policyforge.live_compile import compile_live
+from policyforge.live_compile import compile_live, authorize_workspace
+from policyforge.compile_evidence import EvidenceError, EvidenceStore, configured_test_id
+from uuid import UUID
 from policyforge.request_limits import RequestBodyLimit
 
 from policyforge.models import (
@@ -219,7 +221,39 @@ def compile_policy(req: CompileRequest, authorization: str | None = Header(defau
     if req.use_mock:
         if req.live:
             raise HTTPException(422, {"code": "mode", "message": "Choose either explicit fixture mode or live compilation."})
-        return _compile_mock_policy(req)
+        receipt = None
+        store = EvidenceStore()
+        try:
+            test_id = configured_test_id()
+            if test_id:
+                authorize_workspace(authorization)
+                receipt = store.begin(test_id, str(UUID(idempotency_key or "")), "mock", None,
+                    req.document_text if req.document_text is not None else json.dumps(req.documents, sort_keys=True))
+        except (EvidenceError, ValueError):
+            raise HTTPException(503, {"code": "evidence_unavailable", "message": "Mock evidence could not be reserved. No provider request was made."}) from None
+        try:
+            result = _compile_mock_policy(req)
+        except HTTPException:
+            if receipt is not None:
+                try:
+                    store.finish(receipt, mode="mock", attempts=0, response_received=False,
+                        rules=None, pydantic_status="NOT_RUN", grounding_status="NOT_RUN",
+                        usage=None, finish_reason=None, error_code="mock_compile_failed")
+                except (EvidenceError, ValueError, OSError):
+                    raise HTTPException(503, {"code": "evidence_write_failed", "message": "Mock evidence could not be completed. No provider request was made."}) from None
+            raise
+        result.update(mode="mock", provider_mode="mock", provider_requests=0)
+        if receipt is not None:
+            try:
+                saved = store.finish(receipt, mode="mock", attempts=0, response_received=False,
+                    rules=[Rule.model_validate(r) for r in result["compiled_rules"]],
+                    pydantic_status="PASS" if result["compiled_rules"] else "FAIL",
+                    grounding_status="PASS" if result["compiled_rules"] and not result["rejected_rules"] else "FAIL",
+                    usage=None, finish_reason=None, error_code=None if result["compiled_rules"] and not result["rejected_rules"] else "mock_no_valid_rules")
+            except (EvidenceError, ValueError, OSError):
+                raise HTTPException(503, {"code": "evidence_write_failed", "message": "Mock evidence could not be completed. No provider request was made."}) from None
+            result["evidence"] = {"request_id": str(saved.request_id), "test_id": saved.test_id, "status": "saved"}
+        return result
     if req.documents is not None:
         raise HTTPException(422, {"code": "input", "message": "Live compilation accepts one document_text, not a document batch."})
     return compile_live(req.document_text or "", req.doc_name or "policy.md", idempotency_key, authorization, req.live)
