@@ -1,0 +1,25 @@
+{
+  "root_env_unchanged": true,
+  "artifact_files_scanned": 78,
+  "configured_secret_matches": 0,
+  "served_frontend_loopback_api_restored": true,
+  "http": {
+    "8000_health": 200,
+    "8011_health": 200,
+    "analyze": 200,
+    "allowed_cors": {
+      "status": 200,
+      "allow_origin": "https://judges.example.invalid"
+    },
+    "untrusted_cors": {
+      "status": 400,
+      "allow_origin": null
+    },
+    "public_compile": {
+      "status": 503,
+      "code": "live_disabled"
+    }
+  },
+  "linux_wheels": 24,
+  "static_invalid_origins_rejected": 4
+}

@@ -1,5 +1,11 @@
 # Deployment preparation — not deployed
 
+**Current manual runbook:** [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md).
+The owner will deploy personally. The recommended managed-hosting release uses
+the opt-in public demo guard, live AI OFF and no provider/workspace credentials.
+Both services retain the repository root. Templates are in `deploy/`.
+Older VM guidance below is an alternative, not the selected/executed deployment.
+
 Phase 9C reconfirms zero known vulnerabilities in full/production npm and the
 installed Python environment. See [PHASE9C.md](PHASE9C.md) and its saved evidence.
 Phase 9A cleared the original six findings. Next.js is pinned to
@@ -92,6 +98,12 @@ Request bodies are buffered with a 16 KiB cap for compile and 1 MB for other POS
 routes. Place a reverse proxy with corresponding ingress/header/body/time limits
 and rate/concurrency limits in front of ALL routes, including deterministic suites
 and fixture mode, to protect CPU as well as credits. CORS is not authentication.
+
+The prepared managed public release additionally sets POLICYFORGE_PUBLIC_DEMO=true:
+all compilation is blocked before SDK work, exact HTTPS CORS origins are required,
+and deterministic routes have global rate/concurrency and rule/event/suite/nesting/
+threshold limits. See the current guide for exact bounds and offline verification.
+These process limits are not durable quotas or a guarantee against network DDoS.
 Allowlist origins; do not forward or trust arbitrary user-supplied proxy headers.
 
 **Single worker, one instance only for this guarded operator demo.** Budgets and

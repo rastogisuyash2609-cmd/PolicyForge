@@ -1,5 +1,9 @@
 # PolicyForge frontend
 
+Manual hosted setup: [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md). Static export
+is opt-in; build from the repository root with `cd frontend && npm ci && npm run build`
+and publish `frontend/out`. Repository data outside frontend is required.
+
 Next.js 15.5.28, React 18, TypeScript, Tailwind CSS 3, Framer Motion, and Lucide.
 
 Phase 8 adds explicit, guarded NVIDIA compilation to the existing Analyze screen.

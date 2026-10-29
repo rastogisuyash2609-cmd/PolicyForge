@@ -1,0 +1,67 @@
+name: Offline release checks
+on:
+  pull_request:
+  push:
+    branches: [main, 'codex/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: backend
+      POLICYFORGE_ENABLE_LIVE_AI: 'false'
+      POLICYFORGE_PUBLIC_DEMO: 'true'
+      POLICYFORGE_CORS_ORIGINS: https://judges.example.invalid
+      POLICYFORGE_AI_REQUEST_BUDGET: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: pip install -r backend/requirements-dev.txt
+      - name: Backend regression (live marker excluded; real HTTP transport forbidden)
+        # Local behavior is covered too; public mode has its own guarded tests.
+        env:
+          POLICYFORGE_PUBLIC_DEMO: 'false'
+          POLICYFORGE_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+        run: python -m pytest tests -q
+      - run: npm ci
+        working-directory: frontend
+      - run: npm test && npm run typecheck && npm run lint
+        working-directory: frontend
+      - name: Static production build
+        run: npm run build
+        working-directory: frontend
+        env:
+          POLICYFORGE_STATIC_EXPORT: 'true'
+          NEXT_PUBLIC_API_URL: https://api.example.invalid
+      - name: Real local public-mode API regression (no inference)
+        shell: bash
+        run: |
+          python -m uvicorn policyforge.api:app --host 127.0.0.1 --port 8000 --workers 1 --no-server-header > /tmp/policyforge-api.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid"' EXIT
+          ready=false
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8000/api/health > /dev/null; then ready=true; break; fi
+            sleep 1
+          done
+          test "$ready" = true
+          (cd frontend && npm run test:integration)
+      - run: npm audit --audit-level=low
+        working-directory: frontend
+      - name: Audit installed Python runtime packages
+        # Auditor in a separate venv; audit application env, not tool dependencies.
+        run: |
+          python -m venv /tmp/policyforge-audit
+          /tmp/policyforge-audit/bin/pip install pip-audit
+          site_dir=$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
+          /tmp/policyforge-audit/bin/pip-audit --path "$site_dir"

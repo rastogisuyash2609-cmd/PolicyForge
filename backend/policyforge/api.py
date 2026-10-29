@@ -22,6 +22,7 @@ from policyforge.live_compile import compile_live, authorize_workspace
 from policyforge.compile_evidence import EvidenceError, EvidenceStore, configured_test_id
 from uuid import UUID
 from policyforge.request_limits import RequestBodyLimit
+from policyforge.public_demo import PublicDemoGuard
 
 from policyforge.models import (
     Rule,
@@ -66,6 +67,7 @@ app = FastAPI(
     version="1.0.0",
 )
 app.add_middleware(RequestBodyLimit)
+app.add_middleware(PublicDemoGuard)
 
 app.add_middleware(
     CORSMiddleware,

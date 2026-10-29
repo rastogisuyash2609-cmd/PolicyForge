@@ -1,0 +1,127 @@
+{
+  "release_source_head": "b8eb313",
+  "remote": "https://github.com/Sj-dev90/PolicyForge",
+  "remote_main": "7a5208898fa6b4dea1f3378326ca84255f9e2e8a",
+  "unpushed_completed_commits_at_inspection": 18,
+  "repository_owner": "Sj-dev90",
+  "authenticated_github_login": "rastogisuyash2609-cmd",
+  "github_push_permission": true,
+  "github_admin_permission": false,
+  "repository_public": true,
+  "license_present": false,
+  "new_frontend_unit_tests": {
+    "passed": 63,
+    "failed": 0
+  },
+  "windows_static_export": {
+    "passed": true,
+    "generated_pages": 12,
+    "application_routes": 8,
+    "output": ".local/release-preflight/static-source/out",
+    "build_api_origin": "https://api.example.invalid",
+    "source_copy_includes_sibling_data": true
+  },
+  "git_history_scan": {
+    "blobs": 489,
+    "configured_credential_matches": 0,
+    "private_key_markers": 0,
+    "limitations": "Only configured current credentials and private-key markers checked; not every possible historical/rotated secret."
+  },
+  "npm_vulnerabilities": 0,
+  "python_vulnerabilities": 0,
+  "python_packages_audited": 32,
+  "linux_execution_verified": false,
+  "public_urls_verified": false,
+  "hosting_created": false,
+  "push_performed": false,
+  "merge_performed": false,
+  "live_inference_calls": 0,
+  "blockers": [
+    "Owner chooses hosting/cost and repository integration, personally pushes and deploys",
+    "Target Linux CI/runtime verification pending; workflow prepared but not run",
+    "Actual hosted HTTPS/routes/CORS/private volume/workflow acceptance pending",
+    "License decision before claiming open source",
+    "Paid public/multi-instance release requires durable quotas/identity/spend controls or verified restricted operator-only access; public demo remains inference-free"
+  ],
+  "scope": "Preparation only; owner will personally deploy. No cloud resources or purchases.",
+  "backend_tests": {
+    "passed": 335,
+    "failed": 0,
+    "live_deselected": 1,
+    "seconds": 5.81,
+    "new_public_demo_tests_included": 29,
+    "ci_environment_recheck": "335 passed, 1 deselected; Windows, exact CI backend environment"
+  },
+  "frontend_tests": {
+    "passed": 63,
+    "failed": 0
+  },
+  "public_mode_local_api_tests": {
+    "passed": 10,
+    "failed": 0,
+    "temporary_port": 8011,
+    "real_provider_requests": 0
+  },
+  "total_tests": {
+    "passed": 408,
+    "failed": 0
+  },
+  "typecheck": "PASS",
+  "eslint": "PASS; upstream next lint deprecation notice only",
+  "windows_normal_build_restored": true,
+  "linux_python_wheel_resolution": {
+    "passed": true,
+    "packages": 24,
+    "python": "3.11",
+    "platform": "Linux x64; wheel resolution only, not execution"
+  },
+  "python_dependency_check": "No broken requirements found",
+  "public_demo_guard": {
+    "enabled_by_template": true,
+    "all_compile_blocked": true,
+    "reads_per_minute": 120,
+    "writes_per_minute": 30,
+    "active_writes": 2,
+    "max_rules_per_revision": 100,
+    "max_events_per_journey": 50,
+    "max_custom_scenarios": 200,
+    "max_condition_depth": 8,
+    "max_condition_nodes": 2048,
+    "max_distinct_day_thresholds": 32,
+    "max_json_depth": 32,
+    "max_json_nodes": 50000,
+    "durable_paid_quota": false
+  },
+  "final_checks": {
+    "root_env_unchanged": true,
+    "artifact_files_scanned": 78,
+    "configured_secret_matches": 0,
+    "served_frontend_loopback_api_restored": true,
+    "http": {
+      "8000_health": 200,
+      "8011_health": 200,
+      "analyze": 200,
+      "allowed_cors": {
+        "status": 200,
+        "allow_origin": "https://judges.example.invalid"
+      },
+      "untrusted_cors": {
+        "status": 400,
+        "allow_origin": null
+      },
+      "public_compile": {
+        "status": 503,
+        "code": "live_disabled"
+      }
+    },
+    "linux_wheels": 24,
+    "static_invalid_origins_rejected": 4
+  },
+  "staged_release_scan": {
+    "files": 29,
+    "configured_credential_matches": 0,
+    "private_key_markers": 0,
+    "root_env_excluded": true,
+    "preexisting_agents_excluded": true
+  }
+}

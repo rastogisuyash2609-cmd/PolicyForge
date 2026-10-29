@@ -1,5 +1,13 @@
 # Proposed Phase 9D: restricted Linux deployment runbook
 
+**Owner will deploy personally.** Current managed-hosting instructions are in
+[DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md). This older VM recipe remains an
+alternative; it is not an executed deployment or the current hosting recommendation.
+
+For the deadline-focused managed-hosting option prepared after b8eb313, see
+[PHASE9D_RENDER_PLAN.md](PHASE9D_RENDER_PLAN.md). The static frontend plus managed
+API avoids owning a VM/domain. This document remains an unexecuted VM alternative.
+
 **Prepared only. Do not execute without explicit deployment authorization.** No
 host, domain, IP list, cloud purchase, push or deployment has been approved by this
 document. Linux commands/configuration below were reviewed, not executed on this
