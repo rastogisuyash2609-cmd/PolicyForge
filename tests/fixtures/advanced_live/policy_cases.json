@@ -1,0 +1,867 @@
+[
+  {
+    "id": "ADV-01",
+    "category": "Replacement eligibility",
+    "document_text": "Customers may request a replacement within 14 days of delivery when the item is damaged.",
+    "doc_name": "policy.md",
+    "rules": [
+      {
+        "id": "replace_damage",
+        "name": "Damaged replacements",
+        "decision": "REPLACEMENT",
+        "trigger": "REPLACEMENT_REQUESTED",
+        "when": {
+          "all": [
+            {
+              "field": "item_damaged",
+              "op": "IS_TRUE",
+              "value": true
+            },
+            {
+              "field": "days_since_delivery",
+              "op": "LTE",
+              "value": 14
+            }
+          ]
+        },
+        "effect": "ALLOW",
+        "source": {
+          "doc_name": "policy.md",
+          "verbatim_sentence": "Customers may request a replacement within 14 days of delivery when the item is damaged."
+        }
+      }
+    ],
+    "checks": [
+      {
+        "id": "damaged_0",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 0,
+            "payload": {
+              "item_damaged": true
+            }
+          }
+        ],
+        "outcome": "ALLOW",
+        "resolution": "UNANIMOUS_ALLOW",
+        "final_findings": []
+      },
+      {
+        "id": "damaged_14",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 14,
+            "payload": {
+              "item_damaged": true
+            }
+          }
+        ],
+        "outcome": "ALLOW",
+        "resolution": "UNANIMOUS_ALLOW",
+        "final_findings": []
+      },
+      {
+        "id": "undamaged_14",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 14,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "DEFAULT_DENY",
+        "final_findings": [
+          "POLICY_GAP"
+        ]
+      },
+      {
+        "id": "damaged_15",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 15,
+            "payload": {
+              "item_damaged": true
+            }
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "DEFAULT_DENY",
+        "final_findings": [
+          "POLICY_GAP"
+        ]
+      }
+    ],
+    "fixture_origin": "synthetic offline authoring; not a provider response"
+  },
+  {
+    "id": "ADV-02",
+    "category": "Cancellation conditions",
+    "document_text": "Customers may request a refund after a replacement has been cancelled.",
+    "doc_name": "policy.md",
+    "rules": [
+      {
+        "id": "refund_cancel",
+        "name": "Refund after cancellation",
+        "decision": "REFUND",
+        "trigger": "REFUND_REQUESTED",
+        "when": {
+          "field": "replacement_cancelled",
+          "op": "IS_TRUE",
+          "value": true
+        },
+        "effect": "ALLOW",
+        "source": {
+          "doc_name": "policy.md",
+          "verbatim_sentence": "Customers may request a refund after a replacement has been cancelled."
+        }
+      }
+    ],
+    "checks": [
+      {
+        "id": "after_cancel",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 1,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_CANCELLED",
+            "day": 5,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 10,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW",
+        "resolution": "UNANIMOUS_ALLOW",
+        "final_findings": []
+      },
+      {
+        "id": "not_cancelled",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 10,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "DEFAULT_DENY",
+        "final_findings": [
+          "POLICY_GAP"
+        ]
+      }
+    ],
+    "fixture_origin": "synthetic offline authoring; not a provider response"
+  },
+  {
+    "id": "ADV-03",
+    "category": "Combined refund and replacement",
+    "document_text": "Customers may request a refund within 30 days of delivery.\nCustomers may request a replacement within 14 days of delivery.",
+    "doc_name": "policy.md",
+    "rules": [
+      {
+        "id": "refund_window",
+        "name": "Refund window",
+        "decision": "REFUND",
+        "trigger": "REFUND_REQUESTED",
+        "when": {
+          "field": "days_since_delivery",
+          "op": "LTE",
+          "value": 30
+        },
+        "effect": "ALLOW",
+        "source": {
+          "doc_name": "policy.md",
+          "verbatim_sentence": "Customers may request a refund within 30 days of delivery."
+        }
+      },
+      {
+        "id": "replace_window",
+        "name": "Replacement window",
+        "decision": "REPLACEMENT",
+        "trigger": "REPLACEMENT_REQUESTED",
+        "when": {
+          "field": "days_since_delivery",
+          "op": "LTE",
+          "value": 14
+        },
+        "effect": "ALLOW",
+        "source": {
+          "doc_name": "policy.md",
+          "verbatim_sentence": "Customers may request a replacement within 14 days of delivery."
+        }
+      }
+    ],
+    "checks": [
+      {
+        "id": "refund_30",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 30,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW",
+        "resolution": "UNANIMOUS_ALLOW",
+        "final_findings": []
+      },
+      {
+        "id": "refund_31",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 31,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "DEFAULT_DENY",
+        "final_findings": [
+          "POLICY_GAP"
+        ]
+      },
+      {
+        "id": "replacement_14",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 14,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW",
+        "resolution": "UNANIMOUS_ALLOW",
+        "final_findings": []
+      },
+      {
+        "id": "replacement_15",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 15,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "DEFAULT_DENY",
+        "final_findings": [
+          "POLICY_GAP"
+        ]
+      },
+      {
+        "id": "overlap_refund_10",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 10,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW",
+        "resolution": "UNANIMOUS_ALLOW",
+        "final_findings": []
+      },
+      {
+        "id": "overlap_replacement_10",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 10,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW",
+        "resolution": "UNANIMOUS_ALLOW",
+        "final_findings": []
+      }
+    ],
+    "fixture_origin": "synthetic offline authoring; not a provider response"
+  },
+  {
+    "id": "ADV-04",
+    "category": "Boundary conditions and precedence",
+    "document_text": "Refund requests are allowed less than 30 days after delivery.\nFinal-sale refund requests are denied; this rule overrides the refund-window rule.",
+    "doc_name": "policy.md",
+    "rules": [
+      {
+        "id": "refund_strict",
+        "name": "Strict refund window",
+        "decision": "REFUND",
+        "trigger": "REFUND_REQUESTED",
+        "when": {
+          "field": "days_since_delivery",
+          "op": "LT",
+          "value": 30
+        },
+        "effect": "ALLOW",
+        "source": {
+          "doc_name": "policy.md",
+          "verbatim_sentence": "Refund requests are allowed less than 30 days after delivery."
+        }
+      },
+      {
+        "id": "deny_final",
+        "name": "Final sale exception",
+        "decision": "REFUND",
+        "trigger": "REFUND_REQUESTED",
+        "when": {
+          "field": "is_final_sale",
+          "op": "IS_TRUE",
+          "value": true
+        },
+        "effect": "DENY",
+        "source": {
+          "doc_name": "policy.md",
+          "verbatim_sentence": "Final-sale refund requests are denied; this rule overrides the refund-window rule."
+        },
+        "overrides": [
+          "refund_strict"
+        ]
+      }
+    ],
+    "checks": [
+      {
+        "id": "normal_0",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 0,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW",
+        "resolution": "UNANIMOUS_ALLOW",
+        "final_findings": []
+      },
+      {
+        "id": "normal_29",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 29,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW",
+        "resolution": "UNANIMOUS_ALLOW",
+        "final_findings": []
+      },
+      {
+        "id": "normal_30",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 30,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "DEFAULT_DENY",
+        "final_findings": [
+          "POLICY_GAP"
+        ]
+      },
+      {
+        "id": "normal_31",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 31,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "DEFAULT_DENY",
+        "final_findings": [
+          "POLICY_GAP"
+        ]
+      },
+      {
+        "id": "final_sale_29",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 29,
+            "payload": {
+              "is_final_sale": true
+            }
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "OVERRIDE_DENY",
+        "final_findings": []
+      },
+      {
+        "id": "final_sale_30",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 30,
+            "payload": {
+              "is_final_sale": true
+            }
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "UNANIMOUS_DENY",
+        "final_findings": []
+      }
+    ],
+    "fixture_origin": "synthetic offline authoring; not a provider response"
+  },
+  {
+    "id": "ADV-05",
+    "category": "Ambiguous language",
+    "document_text": "Refunds may be available within a reasonable time.",
+    "doc_name": "policy.md",
+    "rules": [],
+    "checks": [],
+    "fixture_origin": "synthetic offline authoring; not a provider response"
+  },
+  {
+    "id": "ADV-06",
+    "category": "Complex overlapping eligibility",
+    "document_text": "Customers may request a refund within 30 days of delivery.\nCustomers may request a replacement within 14 days of delivery when the item is damaged.\nRefund requests within 14 days of delivery are denied when the item is damaged.\nAll rules have priority 0 and no overrides.",
+    "doc_name": "policy.md",
+    "rules": [
+      {
+        "id": "refund_window",
+        "name": "Refund window",
+        "decision": "REFUND",
+        "trigger": "REFUND_REQUESTED",
+        "when": {
+          "field": "days_since_delivery",
+          "op": "LTE",
+          "value": 30
+        },
+        "effect": "ALLOW",
+        "source": {
+          "doc_name": "policy.md",
+          "verbatim_sentence": "Customers may request a refund within 30 days of delivery."
+        }
+      },
+      {
+        "id": "replace_damage",
+        "name": "Damaged replacements",
+        "decision": "REPLACEMENT",
+        "trigger": "REPLACEMENT_REQUESTED",
+        "when": {
+          "all": [
+            {
+              "field": "item_damaged",
+              "op": "IS_TRUE",
+              "value": true
+            },
+            {
+              "field": "days_since_delivery",
+              "op": "LTE",
+              "value": 14
+            }
+          ]
+        },
+        "effect": "ALLOW",
+        "source": {
+          "doc_name": "policy.md",
+          "verbatim_sentence": "Customers may request a replacement within 14 days of delivery when the item is damaged."
+        }
+      },
+      {
+        "id": "deny_damaged_refund",
+        "name": "Damaged refund denial",
+        "decision": "REFUND",
+        "trigger": "REFUND_REQUESTED",
+        "when": {
+          "all": [
+            {
+              "field": "item_damaged",
+              "op": "IS_TRUE",
+              "value": true
+            },
+            {
+              "field": "days_since_delivery",
+              "op": "LTE",
+              "value": 14
+            }
+          ]
+        },
+        "effect": "DENY",
+        "source": {
+          "doc_name": "policy.md",
+          "verbatim_sentence": "Refund requests within 14 days of delivery are denied when the item is damaged."
+        }
+      }
+    ],
+    "checks": [
+      {
+        "id": "damaged_refund_10",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 10,
+            "payload": {
+              "item_damaged": true
+            }
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "CONTRADICTION",
+        "final_findings": [
+          "CONTRADICTION"
+        ]
+      },
+      {
+        "id": "damaged_refund_14",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 14,
+            "payload": {
+              "item_damaged": true
+            }
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "CONTRADICTION",
+        "final_findings": [
+          "CONTRADICTION"
+        ]
+      },
+      {
+        "id": "damaged_refund_15",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 15,
+            "payload": {
+              "item_damaged": true
+            }
+          }
+        ],
+        "outcome": "ALLOW",
+        "resolution": "UNANIMOUS_ALLOW",
+        "final_findings": []
+      },
+      {
+        "id": "undamaged_refund_10",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 10,
+            "payload": {}
+          }
+        ],
+        "outcome": "ALLOW",
+        "resolution": "UNANIMOUS_ALLOW",
+        "final_findings": []
+      },
+      {
+        "id": "damaged_replacement_10",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 10,
+            "payload": {
+              "item_damaged": true
+            }
+          }
+        ],
+        "outcome": "ALLOW",
+        "resolution": "UNANIMOUS_ALLOW",
+        "final_findings": []
+      },
+      {
+        "id": "damaged_replacement_15",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REPLACEMENT_REQUESTED",
+            "day": 15,
+            "payload": {
+              "item_damaged": true
+            }
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "DEFAULT_DENY",
+        "final_findings": [
+          "POLICY_GAP"
+        ]
+      },
+      {
+        "id": "refund_31",
+        "journey": [
+          {
+            "event_type": "ORDER_PLACED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "ITEM_DELIVERED",
+            "day": 0,
+            "payload": {}
+          },
+          {
+            "event_type": "REFUND_REQUESTED",
+            "day": 31,
+            "payload": {}
+          }
+        ],
+        "outcome": "DENY",
+        "resolution": "DEFAULT_DENY",
+        "final_findings": [
+          "POLICY_GAP"
+        ]
+      }
+    ],
+    "fixture_origin": "synthetic offline authoring; not a provider response"
+  }
+]

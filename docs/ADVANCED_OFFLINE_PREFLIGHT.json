@@ -1,0 +1,832 @@
+{
+  "origin": "Synthetic offline fixtures, NOT real Nemotron responses.",
+  "max_output_tokens": 1536,
+  "live_provider_requests": 0,
+  "cases": [
+    {
+      "test_id": "ADV-01",
+      "compact_fixture_json_characters": 410,
+      "rough_json_only_token_range": [
+        103,
+        137
+      ],
+      "token_estimate_warning": "Character heuristic, not Nemotron tokenizer; excludes reasoning/formatting.",
+      "compiler_prompt_characters": 2237,
+      "checks": [
+        {
+          "check_id": "damaged_0",
+          "outcome": "ALLOW",
+          "resolution": "UNANIMOUS_ALLOW",
+          "final_findings": [],
+          "all_journey_findings": []
+        },
+        {
+          "check_id": "damaged_14",
+          "outcome": "ALLOW",
+          "resolution": "UNANIMOUS_ALLOW",
+          "final_findings": [],
+          "all_journey_findings": []
+        },
+        {
+          "check_id": "undamaged_14",
+          "outcome": "DENY",
+          "resolution": "DEFAULT_DENY",
+          "final_findings": [
+            "POLICY_GAP"
+          ],
+          "all_journey_findings": [
+            {
+              "type": "POLICY_GAP",
+              "severity": "MEDIUM",
+              "rule_ids": [],
+              "event_indices": [
+                2
+              ],
+              "trace": "Policy gap detected at event 2 (day 14): No rules fired for decision event 'REPLACEMENT_REQUESTED'. Default outcome 'DENY' was applied.",
+              "details": {
+                "event_type": "REPLACEMENT_REQUESTED",
+                "day": 14,
+                "default_outcome": "DENY"
+              }
+            }
+          ]
+        },
+        {
+          "check_id": "damaged_15",
+          "outcome": "DENY",
+          "resolution": "DEFAULT_DENY",
+          "final_findings": [
+            "POLICY_GAP"
+          ],
+          "all_journey_findings": [
+            {
+              "type": "POLICY_GAP",
+              "severity": "MEDIUM",
+              "rule_ids": [],
+              "event_indices": [
+                2
+              ],
+              "trace": "Policy gap detected at event 2 (day 15): No rules fired for decision event 'REPLACEMENT_REQUESTED'. Default outcome 'DENY' was applied.",
+              "details": {
+                "event_type": "REPLACEMENT_REQUESTED",
+                "day": 15,
+                "default_outcome": "DENY"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "test_id": "ADV-02",
+      "compact_fixture_json_characters": 331,
+      "rough_json_only_token_range": [
+        83,
+        111
+      ],
+      "token_estimate_warning": "Character heuristic, not Nemotron tokenizer; excludes reasoning/formatting.",
+      "compiler_prompt_characters": 2237,
+      "checks": [
+        {
+          "check_id": "after_cancel",
+          "outcome": "ALLOW",
+          "resolution": "UNANIMOUS_ALLOW",
+          "final_findings": [],
+          "all_journey_findings": [
+            {
+              "type": "POLICY_GAP",
+              "severity": "MEDIUM",
+              "rule_ids": [],
+              "event_indices": [
+                2
+              ],
+              "trace": "Policy gap detected at event 2 (day 1): No rules fired for decision event 'REPLACEMENT_REQUESTED'. Default outcome 'DENY' was applied.",
+              "details": {
+                "event_type": "REPLACEMENT_REQUESTED",
+                "day": 1,
+                "default_outcome": "DENY"
+              }
+            }
+          ]
+        },
+        {
+          "check_id": "not_cancelled",
+          "outcome": "DENY",
+          "resolution": "DEFAULT_DENY",
+          "final_findings": [
+            "POLICY_GAP"
+          ],
+          "all_journey_findings": [
+            {
+              "type": "POLICY_GAP",
+              "severity": "MEDIUM",
+              "rule_ids": [],
+              "event_indices": [
+                2
+              ],
+              "trace": "Policy gap detected at event 2 (day 10): No rules fired for decision event 'REFUND_REQUESTED'. Default outcome 'DENY' was applied.",
+              "details": {
+                "event_type": "REFUND_REQUESTED",
+                "day": 10,
+                "default_outcome": "DENY"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "test_id": "ADV-03",
+      "compact_fixture_json_characters": 608,
+      "rough_json_only_token_range": [
+        152,
+        203
+      ],
+      "token_estimate_warning": "Character heuristic, not Nemotron tokenizer; excludes reasoning/formatting.",
+      "compiler_prompt_characters": 2237,
+      "checks": [
+        {
+          "check_id": "refund_30",
+          "outcome": "ALLOW",
+          "resolution": "UNANIMOUS_ALLOW",
+          "final_findings": [],
+          "all_journey_findings": []
+        },
+        {
+          "check_id": "refund_31",
+          "outcome": "DENY",
+          "resolution": "DEFAULT_DENY",
+          "final_findings": [
+            "POLICY_GAP"
+          ],
+          "all_journey_findings": [
+            {
+              "type": "POLICY_GAP",
+              "severity": "MEDIUM",
+              "rule_ids": [],
+              "event_indices": [
+                2
+              ],
+              "trace": "Policy gap detected at event 2 (day 31): No rules fired for decision event 'REFUND_REQUESTED'. Default outcome 'DENY' was applied.",
+              "details": {
+                "event_type": "REFUND_REQUESTED",
+                "day": 31,
+                "default_outcome": "DENY"
+              }
+            }
+          ]
+        },
+        {
+          "check_id": "replacement_14",
+          "outcome": "ALLOW",
+          "resolution": "UNANIMOUS_ALLOW",
+          "final_findings": [],
+          "all_journey_findings": []
+        },
+        {
+          "check_id": "replacement_15",
+          "outcome": "DENY",
+          "resolution": "DEFAULT_DENY",
+          "final_findings": [
+            "POLICY_GAP"
+          ],
+          "all_journey_findings": [
+            {
+              "type": "POLICY_GAP",
+              "severity": "MEDIUM",
+              "rule_ids": [],
+              "event_indices": [
+                2
+              ],
+              "trace": "Policy gap detected at event 2 (day 15): No rules fired for decision event 'REPLACEMENT_REQUESTED'. Default outcome 'DENY' was applied.",
+              "details": {
+                "event_type": "REPLACEMENT_REQUESTED",
+                "day": 15,
+                "default_outcome": "DENY"
+              }
+            }
+          ]
+        },
+        {
+          "check_id": "overlap_refund_10",
+          "outcome": "ALLOW",
+          "resolution": "UNANIMOUS_ALLOW",
+          "final_findings": [],
+          "all_journey_findings": []
+        },
+        {
+          "check_id": "overlap_replacement_10",
+          "outcome": "ALLOW",
+          "resolution": "UNANIMOUS_ALLOW",
+          "final_findings": [],
+          "all_journey_findings": []
+        }
+      ]
+    },
+    {
+      "test_id": "ADV-04",
+      "compact_fixture_json_characters": 653,
+      "rough_json_only_token_range": [
+        164,
+        218
+      ],
+      "token_estimate_warning": "Character heuristic, not Nemotron tokenizer; excludes reasoning/formatting.",
+      "compiler_prompt_characters": 2237,
+      "checks": [
+        {
+          "check_id": "normal_0",
+          "outcome": "ALLOW",
+          "resolution": "UNANIMOUS_ALLOW",
+          "final_findings": [],
+          "all_journey_findings": []
+        },
+        {
+          "check_id": "normal_29",
+          "outcome": "ALLOW",
+          "resolution": "UNANIMOUS_ALLOW",
+          "final_findings": [],
+          "all_journey_findings": []
+        },
+        {
+          "check_id": "normal_30",
+          "outcome": "DENY",
+          "resolution": "DEFAULT_DENY",
+          "final_findings": [
+            "POLICY_GAP"
+          ],
+          "all_journey_findings": [
+            {
+              "type": "POLICY_GAP",
+              "severity": "MEDIUM",
+              "rule_ids": [],
+              "event_indices": [
+                2
+              ],
+              "trace": "Policy gap detected at event 2 (day 30): No rules fired for decision event 'REFUND_REQUESTED'. Default outcome 'DENY' was applied.",
+              "details": {
+                "event_type": "REFUND_REQUESTED",
+                "day": 30,
+                "default_outcome": "DENY"
+              }
+            }
+          ]
+        },
+        {
+          "check_id": "normal_31",
+          "outcome": "DENY",
+          "resolution": "DEFAULT_DENY",
+          "final_findings": [
+            "POLICY_GAP"
+          ],
+          "all_journey_findings": [
+            {
+              "type": "POLICY_GAP",
+              "severity": "MEDIUM",
+              "rule_ids": [],
+              "event_indices": [
+                2
+              ],
+              "trace": "Policy gap detected at event 2 (day 31): No rules fired for decision event 'REFUND_REQUESTED'. Default outcome 'DENY' was applied.",
+              "details": {
+                "event_type": "REFUND_REQUESTED",
+                "day": 31,
+                "default_outcome": "DENY"
+              }
+            }
+          ]
+        },
+        {
+          "check_id": "final_sale_29",
+          "outcome": "DENY",
+          "resolution": "OVERRIDE_DENY",
+          "final_findings": [],
+          "all_journey_findings": []
+        },
+        {
+          "check_id": "final_sale_30",
+          "outcome": "DENY",
+          "resolution": "UNANIMOUS_DENY",
+          "final_findings": [],
+          "all_journey_findings": []
+        }
+      ]
+    },
+    {
+      "test_id": "ADV-05",
+      "compact_fixture_json_characters": 12,
+      "rough_json_only_token_range": [
+        3,
+        4
+      ],
+      "token_estimate_warning": "Character heuristic, not Nemotron tokenizer; excludes reasoning/formatting.",
+      "compiler_prompt_characters": 2237,
+      "checks": [],
+      "expected_local_rejection": true
+    },
+    {
+      "test_id": "ADV-06",
+      "compact_fixture_json_characters": 1083,
+      "rough_json_only_token_range": [
+        271,
+        361
+      ],
+      "token_estimate_warning": "Character heuristic, not Nemotron tokenizer; excludes reasoning/formatting.",
+      "compiler_prompt_characters": 2237,
+      "checks": [
+        {
+          "check_id": "damaged_refund_10",
+          "outcome": "DENY",
+          "resolution": "CONTRADICTION",
+          "final_findings": [
+            "CONTRADICTION"
+          ],
+          "all_journey_findings": [
+            {
+              "type": "CONTRADICTION",
+              "severity": "HIGH",
+              "rule_ids": [
+                "refund_window",
+                "deny_damaged_refund"
+              ],
+              "event_indices": [
+                2
+              ],
+              "trace": "Contradiction detected at event 2 (day 10): Conflicting outcomes with no declared precedence. ALLOW rules ['refund_window'] and DENY rules ['deny_damaged_refund'] both fired with default priority 0 and no overrides.",
+              "details": {
+                "allow_rules": [
+                  "refund_window"
+                ],
+                "deny_rules": [
+                  "deny_damaged_refund"
+                ],
+                "priority": 0
+              }
+            }
+          ]
+        },
+        {
+          "check_id": "damaged_refund_14",
+          "outcome": "DENY",
+          "resolution": "CONTRADICTION",
+          "final_findings": [
+            "CONTRADICTION"
+          ],
+          "all_journey_findings": [
+            {
+              "type": "CONTRADICTION",
+              "severity": "HIGH",
+              "rule_ids": [
+                "refund_window",
+                "deny_damaged_refund"
+              ],
+              "event_indices": [
+                2
+              ],
+              "trace": "Contradiction detected at event 2 (day 14): Conflicting outcomes with no declared precedence. ALLOW rules ['refund_window'] and DENY rules ['deny_damaged_refund'] both fired with default priority 0 and no overrides.",
+              "details": {
+                "allow_rules": [
+                  "refund_window"
+                ],
+                "deny_rules": [
+                  "deny_damaged_refund"
+                ],
+                "priority": 0
+              }
+            }
+          ]
+        },
+        {
+          "check_id": "damaged_refund_15",
+          "outcome": "ALLOW",
+          "resolution": "UNANIMOUS_ALLOW",
+          "final_findings": [],
+          "all_journey_findings": []
+        },
+        {
+          "check_id": "undamaged_refund_10",
+          "outcome": "ALLOW",
+          "resolution": "UNANIMOUS_ALLOW",
+          "final_findings": [],
+          "all_journey_findings": []
+        },
+        {
+          "check_id": "damaged_replacement_10",
+          "outcome": "ALLOW",
+          "resolution": "UNANIMOUS_ALLOW",
+          "final_findings": [],
+          "all_journey_findings": []
+        },
+        {
+          "check_id": "damaged_replacement_15",
+          "outcome": "DENY",
+          "resolution": "DEFAULT_DENY",
+          "final_findings": [
+            "POLICY_GAP"
+          ],
+          "all_journey_findings": [
+            {
+              "type": "POLICY_GAP",
+              "severity": "MEDIUM",
+              "rule_ids": [],
+              "event_indices": [
+                2
+              ],
+              "trace": "Policy gap detected at event 2 (day 15): No rules fired for decision event 'REPLACEMENT_REQUESTED'. Default outcome 'DENY' was applied.",
+              "details": {
+                "event_type": "REPLACEMENT_REQUESTED",
+                "day": 15,
+                "default_outcome": "DENY"
+              }
+            }
+          ]
+        },
+        {
+          "check_id": "refund_31",
+          "outcome": "DENY",
+          "resolution": "DEFAULT_DENY",
+          "final_findings": [
+            "POLICY_GAP"
+          ],
+          "all_journey_findings": [
+            {
+              "type": "POLICY_GAP",
+              "severity": "MEDIUM",
+              "rule_ids": [],
+              "event_indices": [
+                2
+              ],
+              "trace": "Policy gap detected at event 2 (day 31): No rules fired for decision event 'REFUND_REQUESTED'. Default outcome 'DENY' was applied.",
+              "details": {
+                "event_type": "REFUND_REQUESTED",
+                "day": 31,
+                "default_outcome": "DENY"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "complex_counterexample": {
+    "original_journey": [
+      {
+        "event_type": "ORDER_PLACED",
+        "day": 0,
+        "payload": {}
+      },
+      {
+        "event_type": "ITEM_DELIVERED",
+        "day": 0,
+        "payload": {}
+      },
+      {
+        "event_type": "REFUND_REQUESTED",
+        "day": 10,
+        "payload": {
+          "item_damaged": true
+        }
+      }
+    ],
+    "minimal_journey": [
+      {
+        "event_type": "ITEM_DELIVERED",
+        "day": 0,
+        "payload": {}
+      },
+      {
+        "event_type": "REFUND_REQUESTED",
+        "day": 0,
+        "payload": {
+          "item_damaged": true
+        }
+      }
+    ],
+    "shrink_engine_runs": 9,
+    "signature": [
+      "CONTRADICTION",
+      [
+        "deny_damaged_refund",
+        "refund_window"
+      ]
+    ],
+    "replay": {
+      "outcomes": [
+        {
+          "event_index": 0,
+          "day": 0,
+          "event_type": "ITEM_DELIVERED",
+          "outcome": "ALLOW",
+          "action_applied": true,
+          "resolution_type": "NON_DECISION",
+          "findings": []
+        },
+        {
+          "event_index": 1,
+          "day": 0,
+          "event_type": "REFUND_REQUESTED",
+          "outcome": "DENY",
+          "action_applied": false,
+          "resolution_type": "CONTRADICTION",
+          "findings": [
+            {
+              "type": "CONTRADICTION",
+              "severity": "HIGH",
+              "rule_ids": [
+                "refund_window",
+                "deny_damaged_refund"
+              ],
+              "event_indices": [
+                1
+              ],
+              "trace": "Contradiction detected at event 1 (day 0): Conflicting outcomes with no declared precedence. ALLOW rules ['refund_window'] and DENY rules ['deny_damaged_refund'] both fired with default priority 0 and no overrides.",
+              "details": {
+                "allow_rules": [
+                  "refund_window"
+                ],
+                "deny_rules": [
+                  "deny_damaged_refund"
+                ],
+                "priority": 0
+              }
+            }
+          ]
+        }
+      ],
+      "final_state": {
+        "order_placed": false,
+        "order_day": null,
+        "item_delivered": true,
+        "delivery_day": 0,
+        "days_since_delivery": 0,
+        "replacement_requested": false,
+        "replacement_request_day": null,
+        "replacement_cancelled": false,
+        "replacement_cancel_day": null,
+        "replacement_active": false,
+        "replacement_completed": false,
+        "replacement_completed_day": null,
+        "refund_requested": false,
+        "refund_request_day": null,
+        "refund_completed": false,
+        "refund_completed_day": null,
+        "return_received": false,
+        "item_damaged": true,
+        "is_final_sale": false,
+        "item_opened": false,
+        "customer_tier": "STANDARD",
+        "refund_eligibility_restored": false,
+        "action_denied": true,
+        "amount_paid": 0.0,
+        "refund_amount": 0.0,
+        "chargeback_active": false
+      },
+      "trace": {
+        "event_traces": [
+          {
+            "event_index": 0,
+            "day": 0,
+            "event_type": "ITEM_DELIVERED",
+            "is_decision_event": false,
+            "rules_evaluated": [],
+            "rules_fired": [],
+            "evaluations": [],
+            "resolution_type": "NON_DECISION",
+            "outcome": "ALLOW",
+            "active_rules": [],
+            "suppressed_rules": [],
+            "findings": [],
+            "state_before": {
+              "order_placed": false,
+              "order_day": null,
+              "item_delivered": false,
+              "delivery_day": null,
+              "days_since_delivery": null,
+              "replacement_requested": false,
+              "replacement_request_day": null,
+              "replacement_cancelled": false,
+              "replacement_cancel_day": null,
+              "replacement_active": false,
+              "replacement_completed": false,
+              "replacement_completed_day": null,
+              "refund_requested": false,
+              "refund_request_day": null,
+              "refund_completed": false,
+              "refund_completed_day": null,
+              "return_received": false,
+              "item_damaged": false,
+              "is_final_sale": false,
+              "item_opened": false,
+              "customer_tier": "STANDARD",
+              "refund_eligibility_restored": false,
+              "action_denied": false,
+              "amount_paid": 0.0,
+              "refund_amount": 0.0,
+              "chargeback_active": false
+            },
+            "state_after": {
+              "order_placed": false,
+              "order_day": null,
+              "item_delivered": true,
+              "delivery_day": 0,
+              "days_since_delivery": 0,
+              "replacement_requested": false,
+              "replacement_request_day": null,
+              "replacement_cancelled": false,
+              "replacement_cancel_day": null,
+              "replacement_active": false,
+              "replacement_completed": false,
+              "replacement_completed_day": null,
+              "refund_requested": false,
+              "refund_request_day": null,
+              "refund_completed": false,
+              "refund_completed_day": null,
+              "return_received": false,
+              "item_damaged": false,
+              "is_final_sale": false,
+              "item_opened": false,
+              "customer_tier": "STANDARD",
+              "refund_eligibility_restored": false,
+              "action_denied": false,
+              "amount_paid": 0.0,
+              "refund_amount": 0.0,
+              "chargeback_active": false
+            },
+            "explanation": "Processed non-decision event ITEM_DELIVERED."
+          },
+          {
+            "event_index": 1,
+            "day": 0,
+            "event_type": "REFUND_REQUESTED",
+            "is_decision_event": true,
+            "rules_evaluated": [
+              "refund_window",
+              "deny_damaged_refund"
+            ],
+            "rules_fired": [
+              "refund_window",
+              "deny_damaged_refund"
+            ],
+            "evaluations": [
+              {
+                "rule_id": "refund_window",
+                "rule_name": "Refund window",
+                "effect": "ALLOW",
+                "priority": 0,
+                "fired": true,
+                "leaf_evaluations": [
+                  {
+                    "field": "days_since_delivery",
+                    "op": "LTE",
+                    "expected_value": 30,
+                    "actual_value": 0,
+                    "passed": true,
+                    "description": "days_since_delivery (0) LTE 30 -> True"
+                  }
+                ],
+                "reason": "All conditions passed"
+              },
+              {
+                "rule_id": "deny_damaged_refund",
+                "rule_name": "Damaged refund denial",
+                "effect": "DENY",
+                "priority": 0,
+                "fired": true,
+                "leaf_evaluations": [
+                  {
+                    "field": "item_damaged",
+                    "op": "IS_TRUE",
+                    "expected_value": true,
+                    "actual_value": true,
+                    "passed": true,
+                    "description": "item_damaged (True) IS_TRUE True -> True"
+                  },
+                  {
+                    "field": "days_since_delivery",
+                    "op": "LTE",
+                    "expected_value": 14,
+                    "actual_value": 0,
+                    "passed": true,
+                    "description": "days_since_delivery (0) LTE 14 -> True"
+                  }
+                ],
+                "reason": "All conditions passed"
+              }
+            ],
+            "resolution_type": "CONTRADICTION",
+            "outcome": "DENY",
+            "active_rules": [],
+            "suppressed_rules": [
+              "refund_window",
+              "deny_damaged_refund"
+            ],
+            "findings": [
+              {
+                "type": "CONTRADICTION",
+                "severity": "HIGH",
+                "rule_ids": [
+                  "refund_window",
+                  "deny_damaged_refund"
+                ],
+                "event_indices": [
+                  1
+                ],
+                "trace": "Contradiction detected at event 1 (day 0): Conflicting outcomes with no declared precedence. ALLOW rules ['refund_window'] and DENY rules ['deny_damaged_refund'] both fired with default priority 0 and no overrides.",
+                "details": {
+                  "allow_rules": [
+                    "refund_window"
+                  ],
+                  "deny_rules": [
+                    "deny_damaged_refund"
+                  ],
+                  "priority": 0
+                }
+              }
+            ],
+            "state_before": {
+              "order_placed": false,
+              "order_day": null,
+              "item_delivered": true,
+              "delivery_day": 0,
+              "days_since_delivery": 0,
+              "replacement_requested": false,
+              "replacement_request_day": null,
+              "replacement_cancelled": false,
+              "replacement_cancel_day": null,
+              "replacement_active": false,
+              "replacement_completed": false,
+              "replacement_completed_day": null,
+              "refund_requested": false,
+              "refund_request_day": null,
+              "refund_completed": false,
+              "refund_completed_day": null,
+              "return_received": false,
+              "item_damaged": false,
+              "is_final_sale": false,
+              "item_opened": false,
+              "customer_tier": "STANDARD",
+              "refund_eligibility_restored": false,
+              "action_denied": false,
+              "amount_paid": 0.0,
+              "refund_amount": 0.0,
+              "chargeback_active": false
+            },
+            "state_after": {
+              "order_placed": false,
+              "order_day": null,
+              "item_delivered": true,
+              "delivery_day": 0,
+              "days_since_delivery": 0,
+              "replacement_requested": false,
+              "replacement_request_day": null,
+              "replacement_cancelled": false,
+              "replacement_cancel_day": null,
+              "replacement_active": false,
+              "replacement_completed": false,
+              "replacement_completed_day": null,
+              "refund_requested": false,
+              "refund_request_day": null,
+              "refund_completed": false,
+              "refund_completed_day": null,
+              "return_received": false,
+              "item_damaged": true,
+              "is_final_sale": false,
+              "item_opened": false,
+              "customer_tier": "STANDARD",
+              "refund_eligibility_restored": false,
+              "action_denied": true,
+              "amount_paid": 0.0,
+              "refund_amount": 0.0,
+              "chargeback_active": false
+            },
+            "explanation": "Decision event REFUND_REQUESTED: outcome=DENY via CONTRADICTION (active=[])."
+          }
+        ]
+      },
+      "findings": [
+        {
+          "type": "CONTRADICTION",
+          "severity": "HIGH",
+          "rule_ids": [
+            "refund_window",
+            "deny_damaged_refund"
+          ],
+          "event_indices": [
+            1
+          ],
+          "trace": "Contradiction detected at event 1 (day 0): Conflicting outcomes with no declared precedence. ALLOW rules ['refund_window'] and DENY rules ['deny_damaged_refund'] both fired with default priority 0 and no overrides.",
+          "details": {
+            "allow_rules": [
+              "refund_window"
+            ],
+            "deny_rules": [
+              "deny_damaged_refund"
+            ],
+            "priority": 0
+          }
+        }
+      ]
+    }
+  },
+  "network_attempts": 0,
+  "total_deterministic_checks": 25
+}

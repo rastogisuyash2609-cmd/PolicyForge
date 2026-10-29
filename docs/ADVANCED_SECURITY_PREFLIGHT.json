@@ -1,0 +1,15 @@
+{
+  "origin": "Local preparation preflight; no provider request.",
+  "files_scanned": 339,
+  "configured_credential_matches": 0,
+  "root_env_ignored_untracked": true,
+  "root_env_unchanged_during_preparation": true,
+  "root_env_live_disabled": true,
+  "root_env_request_budget": 1,
+  "credentials_configured_without_display": true,
+  "backend_health_http": 200,
+  "frontend_analyze_http": 200,
+  "compile_gate_http": 503,
+  "compile_gate_code": "live_disabled",
+  "provider_requests_this_preparation": 0
+}

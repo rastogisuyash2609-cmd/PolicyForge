@@ -1,5 +1,12 @@
 # Stage 2 policy testing coverage
 
+The Phase 9C extension prepares the five remaining categories plus one complex
+overlap case in [ADVANCED_LIVE_TEST_PLAN.md](ADVANCED_LIVE_TEST_PLAN.md). It adds
+explicit precedence and reproducible offline replay. Its actual live records are
+still NOT_RUN; only the simple refund category has live success evidence. Follow
+that plan for a separately authorized replacement test, not the historical
+first-simple-refund procedure below.
+
 Phase 9C reran all six categories offline using fixtures and the deterministic
 engine. Only **simple_refund** has real Nemotron success evidence: the successful
 third CLI smoke test and the owner-performed Phase 9B frontend compilation.
