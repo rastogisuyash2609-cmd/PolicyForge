@@ -61,6 +61,7 @@ jobs:
       - name: Audit installed Python runtime packages
         # Auditor in a separate venv; audit application env, not tool dependencies.
         run: |
+          python -m pip install --upgrade "setuptools>=84.1.0"
           python -m venv /tmp/policyforge-audit
           /tmp/policyforge-audit/bin/pip install pip-audit
           site_dir=$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
