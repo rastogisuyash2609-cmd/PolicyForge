@@ -38,3 +38,34 @@ The original fixed synthetic CLI smoke runner is still independent of the API.
 It does not accept arbitrary Stage 2 documents and must not be used as a batch tool.
 The next live action would exercise the new UI/API integration, not merely repeat
 the already-passing fixed CLI test.
+
+## Phase 9B: prepared inputs and acceptance criteria
+
+These are independent future candidates, not an authorized batch. Start with
+**simple_refund** only after explicit Step B approval. Each automated fixture is
+offline. No live inference is necessary to validate fixture structure or run the
+deterministic journeys; a separately authorized live call would evaluate extraction.
+
+| Case | Exact input text | Expected validation and grounding | Fail the review if |
+| --- | --- | --- | --- |
+| simple_refund | Customers may request a refund within 30 days of delivery. | One REFUND / REFUND_REQUESTED / ALLOW rule; days_since_delivery LTE 30, optionally an item_delivered IS_TRUE guard. Pydantic and grounding pass; exact input sentence quoted. Days 0 and 30 allow, day 31 defaults DENY. | LT replaces LTE; another deadline, exception, decision, automatic payment or unsupported field is invented; quote/document mismatch. |
+| damaged_replacement | Customers may request a replacement within 14 days of delivery when the item is damaged. | One REPLACEMENT / REPLACEMENT_REQUESTED / ALLOW rule with nested all: item_damaged IS_TRUE and days_since_delivery LTE 14. Pydantic and exact-quote grounding pass. Damaged/day 14 allows; undamaged or day 15 defaults DENY. | OR replaces AND; damage qualification is missing; refund trigger/decision is substituted; a source mismatch or invented qualification appears. |
+| cancelled_replacement | Customers may request a refund after a replacement has been cancelled. | One REFUND / REFUND_REQUESTED / ALLOW rule; replacement_cancelled IS_TRUE. Pydantic and exact-quote grounding pass. Cancellation followed by refund request allows; no cancellation defaults DENY. | A deadline is invented, cancellation itself becomes the refund decision trigger, automatic payment is asserted, or a source mismatch appears. |
+| combined_policy | Customers may request a refund within 30 days of delivery.<br>Customers may request a replacement within 14 days of delivery. | Two separately grounded rules; refund LTE 30 and replacement LTE 14, each with its matching requested event and decision. Pydantic passes, unique IDs, exact corresponding sentence per rule. Refund days 30/31 and replacement days 14/15 distinguish inclusive boundaries. | Only one obligation is extracted; triggers/decisions/windows are conflated; exceptions or overrides are invented; either quotation fails grounding. |
+| strict_boundary | Refund requests are allowed less than 30 days after delivery. | One REFUND / REFUND_REQUESTED / ALLOW rule; days_since_delivery LT 30. Pydantic and exact-quote grounding pass. Day 29 allows; days 30 and 31 default DENY. | LTE is substituted for LT, an explicit policy denial is invented from the engine fallback, or the source does not match. |
+| ambiguous_window | Refunds may be available within a reasonable time. | Expect rejection/human clarification; no justified numeric threshold exists. An empty rules envelope fails the live endpoint's minimum-one-rule validation locally, with no repair. The original sentence is the only grounding evidence. | Any numeric duration, unconditional entitlement or other meaning is invented. Even Pydantic-valid, grounded output fails human semantic review if it guesses the missing meaning. |
+
+Enter the combined case as two sentences separated by a newline. Expected complete
+fixture rules are in tests/fixtures/stage2/policy_cases.json; rule IDs/names need not
+match those fixture labels when evaluating a model response, but must be valid and
+unique. Optional delivery guards may express the temporal premise without adding a
+new business qualification. Unsupported fields/operators/events, dynamic-key
+conditions, malformed/truncated JSON, absent mandatory Rule fields and duplicate IDs
+always fail. There is no silent correction or inference repair.
+
+For fixture tests the source document is the case's named .md file. The actual
+Analyze UI currently sends **doc_name=policy.md for every input**; its compiled
+sources must therefore say policy.md, irrespective of the display policy name.
+Source quotations must match the input; grounding alone does not prove that all
+conditions or obligations were extracted correctly. Preserve the previous active
+revision on any failure and do not proceed to another case without new approval.

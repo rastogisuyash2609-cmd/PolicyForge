@@ -135,6 +135,51 @@ def test_gate_concurrency_rate_and_session_budget() -> None:
     assert gate.attempts == 3 and not gate.active
 
 
+@pytest.mark.parametrize("invalid_authorization", ["Bearer invalid", "Basic invalid", "Bearer " + SECRET])
+def test_wrong_workspace_authorization_never_reaches_provider(
+    configured: list[httpx.Request], invalid_authorization: str,
+) -> None:
+    response = TestClient(app).post("/api/compile", headers={
+        "Authorization": invalid_authorization, "Idempotency-Key": str(uuid4()),
+    }, json={"document_text": TEXT, "live": True})
+    assert response.status_code == 401
+    assert response.json()["detail"]["code"] == "access_denied"
+    assert configured == [] and live.gate.attempts == 0
+
+
+def test_provider_key_cannot_be_used_as_workspace_code(
+    configured: list[httpx.Request], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("POLICYFORGE_COMPILE_TOKEN", SECRET)
+    response = post()
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "access_not_configured"
+    assert configured == [] and live.gate.attempts == 0
+
+
+@pytest.mark.parametrize("invalid_output", [False, True], ids=["success", "validation_failure"])
+def test_one_attempt_session_budget_blocks_new_policy_after_success_or_failure(
+    configured: list[httpx.Request], monkeypatch: pytest.MonkeyPatch, invalid_output: bool,
+) -> None:
+    monkeypatch.setenv("POLICYFORGE_AI_REQUEST_BUDGET", "1")
+    now = [1000.0]
+    monkeypatch.setattr(live, "gate", live.CompileGate(lambda: now[0]))
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        configured.append(request)
+        return completion("invalid JSON" if invalid_output else envelope())
+
+    monkeypatch.setattr(live, "BoundedCompileClient", lambda: CLIENT_CLASS(httpx.MockTransport(handle)))
+    assert post().status_code == (422 if invalid_output else 200)
+    # New content/UUID after rate and content cooldowns must still hit the hard budget.
+    now[0] += 301
+    response = post(document_text="Refunds are allowed within 14 days of delivery.")
+    assert response.status_code == 429
+    assert response.json()["detail"]["code"] == "budget_limit"
+    assert len(configured) == live.gate.attempts == 1
+    assert not live.gate.active
+
+
 def test_body_limit_and_cors(configured: list) -> None:
     client = TestClient(app)
     assert client.post("/api/compile", content=b"x" * 17000).status_code == 413
