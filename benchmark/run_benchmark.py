@@ -1,8 +1,12 @@
 """Main benchmark runner: orchestrates baseline and engine evaluation.
 
 Usage:
-    # With API key configured (runs both baseline and engine):
+    # Default is deterministic, even when an API key is configured:
     python benchmark/run_benchmark.py
+
+    # Separately authorized paid baseline only (not covered by API session quotas):
+    # Requires POLICYFORGE_ENABLE_LIVE_AI=true as well as this explicit flag.
+    python benchmark/run_benchmark.py --live-baseline
 
     # Engine-only (no API key needed):
     python benchmark/run_benchmark.py --engine-only
@@ -287,10 +291,16 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help="Path to rules JSON (default: data/novacart/rules_v1.json)",
     )
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--engine-only",
         action="store_true",
-        help="Skip the LLM baseline (no API key required).",
+        help="Explicitly select deterministic-only execution (also the default).",
+    )
+    mode.add_argument(
+        "--live-baseline",
+        action="store_true",
+        help="Explicitly authorize the legacy paid baseline; also requires live AI environment opt-in.",
     )
     parser.add_argument(
         "--n-runs",
@@ -310,6 +320,9 @@ def main(argv: list[str] | None = None) -> None:
         help="Directory to write results.json and report.md.",
     )
     args = parser.parse_args(argv)
+
+    if args.live_baseline and os.getenv("POLICYFORGE_ENABLE_LIVE_AI", "false").lower() != "true":
+        parser.error("Live baseline is disabled. Use deterministic execution; enabling paid work requires separate owner authorization.")
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -339,12 +352,12 @@ def main(argv: list[str] | None = None) -> None:
     baseline_results: list[Any] | None = None
     baseline_metrics: MetricsReport | None = None
 
-    if not args.engine_only:
+    if args.live_baseline:
         api_key = os.getenv("NEBIUS_API_KEY") or os.getenv("OPENAI_API_KEY")
         if not api_key:
             print(
                 "\n[WARN] No NEBIUS_API_KEY found — skipping baseline. "
-                "Set NEBIUS_API_KEY in .env or use --engine-only."
+                "Use deterministic execution or configure credentials after separate owner authorization."
             )
         else:
             from benchmark.baseline import BaselineRunner
@@ -361,7 +374,7 @@ def main(argv: list[str] | None = None) -> None:
             print(f"  Baseline accuracy: {base_correct}/{base_total}")
             print(f"  Baseline consistency: {baseline_metrics.consistency_rate * 100:.1f}%")
     else:
-        print("\n[INFO] Baseline skipped (--engine-only).")
+        print("\n[INFO] Baseline skipped (deterministic-only mode; no provider requests).")
 
     # --- Write results.json ---
     results_path = output_dir / "results.json"

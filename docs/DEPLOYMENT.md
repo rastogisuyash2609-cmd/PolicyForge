@@ -1,8 +1,8 @@
 # Deployment preparation — not deployed
 
-Phase 9A clears the six identified frontend dependency findings. The refreshed
-full and production npm audits and Python audits report zero known vulnerabilities;
-see [PHASE9A.md](PHASE9A.md) and its saved audit evidence. Next.js is pinned to
+Phase 9C reconfirms zero known vulnerabilities in full/production npm and the
+installed Python environment. See [PHASE9C.md](PHASE9C.md) and its saved evidence.
+Phase 9A cleared the original six findings. Next.js is pinned to
 15.5.28, with its PostCSS dependency overridden to the already-used 8.5.30.
 This removes the identified dependency release blocker, not the public-service
 authentication, durable quota, TLS and ingress prerequisites below. Nothing has
@@ -12,11 +12,12 @@ been pushed, merged, deployed or publicly bound.
 
 Use Node.js with the checked-in npm lockfile, and Python 3.11. From the project root:
 
-Phase 9A was verified on Windows with Node.js 22.19.0 and npm 10.9.3. The frontend
-still has its existing Windows-only direct SWC dependency (now aligned to Next.js).
-For Linux hosting, remove that redundant direct dependency and let Next.js install
-its platform-specific optional SWC package, then validate a clean install/build on
-the target platform. Linux deployment has not been verified. Python manifests pin
+Phase 9C was verified on Windows with Node.js 22.19.0 and npm 10.9.3. The redundant
+Windows-only direct SWC dependency has now been removed. Next.js selects SWC through
+its platform-specific optional dependencies; Windows and Linux x64 packages remain
+in the lockfile at 15.5.28. A clean Windows npm ci and build pass. Native Linux
+execution is **not verified**: this host has no installed WSL distribution or Docker.
+Run target Linux clean-install/build/API checks before deployment. Python manifests pin
 direct dependencies; transitive versions can change on a fresh install, so audit
 the actual release environment as well.
 
@@ -117,3 +118,17 @@ Compile → review → activate → stress/What-if → report checks. Never depl
 Production source entry points are `policyforge.api:app` and `next start`.
 Frontend/backend health and CORS checks do not require inference. Deploy only after
 an explicitly authorized release decision and successful dependency remediation.
+
+## Fastest restricted release path
+
+Use one Linux VM with Next.js and one FastAPI worker on loopback behind a single
+HTTPS reverse proxy. Keep live AI OFF, omit provider credentials from the demo
+host, and restrict every application route to approved operator/judge IPs or an
+identity-aware gateway. Same-origin /api routing avoids split-origin credential
+and CORS complexity. This is a restricted deterministic demo, not anonymous live AI.
+
+[PHASE9D_DEPLOYMENT.md](PHASE9D_DEPLOYMENT.md) contains the exact proposed Linux
+verification, systemd, TLS/proxy, health and rollback steps. They are prepared only;
+Phase 9D, host provisioning and deployment are not authorized or executed here.
+For unrestricted public live AI, persistent shared quotas/idempotency, identity,
+account spend controls and gateway rate limits remain release blockers.

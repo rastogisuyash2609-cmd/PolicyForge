@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 import pytest
 from pydantic import ValidationError
 
@@ -33,11 +34,45 @@ from benchmark.metrics import (
     MetricsReport,
 )
 from benchmark.run_benchmark import (
+    main,
     render_markdown_report,
     build_results_json,
 )
 from policyforge.llm import LLMClient
 from policyforge.models import EventType, EffectType
+
+
+@pytest.mark.parametrize("live_flag", ["false", "true"])
+def test_cli_defaults_offline_even_with_credentials(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, live_flag: str,
+) -> None:
+    monkeypatch.setenv("NEBIUS_API_KEY", "offline-benchmark-test-only")
+    monkeypatch.setenv("POLICYFORGE_ENABLE_LIVE_AI", live_flag)
+
+    def forbidden(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("Default benchmark must not construct a provider client.")
+
+    monkeypatch.setattr(LLMClient, "__init__", forbidden)
+    main(["--limit", "1", "--output-dir", str(tmp_path)])
+    result = json.loads((tmp_path / "results.json").read_text())
+    assert result["baseline"] is None
+    assert len(result["engine"]["results"]) == 1
+
+
+def test_cli_live_baseline_requires_environment_opt_in(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("POLICYFORGE_ENABLE_LIVE_AI", raising=False)
+    with pytest.raises(SystemExit) as error:
+        main(["--live-baseline", "--output-dir", str(tmp_path)])
+    assert error.value.code == 2
+    assert not (tmp_path / "results.json").exists()
+
+
+def test_cli_rejects_conflicting_modes(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit) as error:
+        main(["--engine-only", "--live-baseline", "--output-dir", str(tmp_path)])
+    assert error.value.code == 2
 
 
 # ---------------------------------------------------------------------------

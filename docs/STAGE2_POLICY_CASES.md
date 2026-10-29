@@ -1,4 +1,19 @@
-# Stage 2 policy testing preparation — no live execution
+# Stage 2 policy testing coverage
+
+Phase 9C reran all six categories offline using fixtures and the deterministic
+engine. Only **simple_refund** has real Nemotron success evidence: the successful
+third CLI smoke test and the owner-performed Phase 9B frontend compilation.
+The frontend request's exact usage/billing remain unavailable/pending. No further
+live extraction was run in Phase 9C. The other five categories remain mock-only.
+
+| Category | Offline fixture/engine status | Real Nemotron status |
+| --- | --- | --- |
+| Simple refunds | PASS, including days 0/30 ALLOW and day 31 DEFAULT_DENY with POLICY_GAP | PASS for the single synthetic 30-day policy; live activation/analysis not independently recorded |
+| Damaged replacement eligibility | PASS | Not live-tested |
+| Refund after replacement cancellation | PASS | Not live-tested |
+| Combined refund/replacement | PASS | Not live-tested |
+| Strict boundary (LT 30) | PASS | Not live-tested |
+| Ambiguous language | PASS for fixture rejection/no invented threshold | Not live-tested; no guarantee a real model will reject rather than guess |
 
 The six synthetic documents, expected complete IR envelopes and deterministic
 journeys are in `tests/fixtures/stage2/policy_cases.json`. They were authored offline,
@@ -36,8 +51,8 @@ automatically. Changing an example or typing never calls the model.
 
 The original fixed synthetic CLI smoke runner is still independent of the API.
 It does not accept arbitrary Stage 2 documents and must not be used as a batch tool.
-The next live action would exercise the new UI/API integration, not merely repeat
-the already-passing fixed CLI test.
+The first real UI/API extraction passed in Phase 9B. No next live action is
+authorized automatically, and no six-case live sweep has been performed.
 
 ## Phase 9B: prepared inputs and acceptance criteria
 

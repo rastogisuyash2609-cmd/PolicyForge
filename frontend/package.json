@@ -12,7 +12,6 @@
     "test": "tsc -p tsconfig.tests.json && node --test .test-output/tests/design-system.test.js .test-output/tests/policy-workspace.test.js .test-output/tests/api-client.test.js .test-output/tests/comparison.test.js .test-output/tests/advanced-features.test.js .test-output/tests/compilation.test.js"
   },
   "dependencies": {
-    "@next/swc-win32-x64-msvc": "15.5.28",
     "clsx": "^2.1.1",
     "framer-motion": "^14.3.0",
     "lucide-react": "^1.58.0",

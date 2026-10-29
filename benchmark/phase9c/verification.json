@@ -1,0 +1,206 @@
+{
+  "mode": "engine_only_network_blocked",
+  "provider_requests": 0,
+  "blocked_network_attempts": 0,
+  "labeled_cases_available": 50,
+  "labeled_cases_executed": 50,
+  "outcome_label_passed": 49,
+  "outcome_label_failed": 0,
+  "outcome_not_scored": 1,
+  "finding_counts": {
+    "CONTRADICTION": 1,
+    "POLICY_GAP": 1,
+    "INVARIANT_VIOLATION": 1
+  },
+  "journeys_with_contradictions": 1,
+  "suite_journeys_without_findings": 47,
+  "suite_journeys_with_findings": 3,
+  "suite_finding_occurrences": 3,
+  "unique_finding_signatures": 3,
+  "counterexamples_generated": 3,
+  "counterexamples_replayed_successfully": 3,
+  "counterexamples": [
+    {
+      "finding_type": "CONTRADICTION",
+      "rule_ids": [
+        "rule_refund_after_replacement_cancelled",
+        "rule_refund_past_deadline"
+      ],
+      "original_steps": 4,
+      "minimal_steps": 4,
+      "shrink_engine_runs": 23,
+      "replay_preserves_signature": true,
+      "domain_valid": true,
+      "minimal_journey": [
+        {
+          "event_type": "ITEM_DELIVERED",
+          "day": 0,
+          "payload": {}
+        },
+        {
+          "event_type": "REPLACEMENT_REQUESTED",
+          "day": 0,
+          "payload": {}
+        },
+        {
+          "event_type": "REPLACEMENT_CANCELLED",
+          "day": 0,
+          "payload": {}
+        },
+        {
+          "event_type": "REFUND_REQUESTED",
+          "day": 31,
+          "payload": {}
+        }
+      ],
+      "finding": {
+        "type": "CONTRADICTION",
+        "severity": "HIGH",
+        "rule_ids": [
+          "rule_refund_after_replacement_cancelled",
+          "rule_refund_past_deadline"
+        ],
+        "event_indices": [
+          3
+        ],
+        "trace": "Contradiction detected at event 3 (day 31): Conflicting outcomes with no declared precedence. ALLOW rules ['rule_refund_after_replacement_cancelled'] and DENY rules ['rule_refund_past_deadline'] both fired with default priority 0 and no overrides.",
+        "details": {
+          "allow_rules": [
+            "rule_refund_after_replacement_cancelled"
+          ],
+          "deny_rules": [
+            "rule_refund_past_deadline"
+          ],
+          "priority": 0
+        }
+      }
+    },
+    {
+      "finding_type": "POLICY_GAP",
+      "rule_ids": [],
+      "original_steps": 2,
+      "minimal_steps": 1,
+      "shrink_engine_runs": 3,
+      "replay_preserves_signature": true,
+      "domain_valid": true,
+      "minimal_journey": [
+        {
+          "event_type": "REPLACEMENT_REQUESTED",
+          "day": 0,
+          "payload": {}
+        }
+      ],
+      "finding": {
+        "type": "POLICY_GAP",
+        "severity": "MEDIUM",
+        "rule_ids": [],
+        "event_indices": [
+          0
+        ],
+        "trace": "Policy gap detected at event 0 (day 0): No rules fired for decision event 'REPLACEMENT_REQUESTED'. Default outcome 'DENY' was applied.",
+        "details": {
+          "event_type": "REPLACEMENT_REQUESTED",
+          "day": 0,
+          "default_outcome": "DENY"
+        }
+      }
+    },
+    {
+      "finding_type": "INVARIANT_VIOLATION",
+      "rule_ids": [],
+      "original_steps": 4,
+      "minimal_steps": 1,
+      "shrink_engine_runs": 7,
+      "replay_preserves_signature": true,
+      "domain_valid": true,
+      "minimal_journey": [
+        {
+          "event_type": "REFUND_COMPLETED",
+          "day": 0,
+          "payload": {}
+        }
+      ],
+      "finding": {
+        "type": "INVARIANT_VIOLATION",
+        "severity": "CRITICAL",
+        "rule_ids": [],
+        "event_indices": [
+          0
+        ],
+        "trace": "Invariant violation [completion_requires_prior_request] at event 0 (day 0): Refund completed without any recorded refund request.",
+        "details": {
+          "action": "REFUND",
+          "reason": "no_request"
+        }
+      }
+    }
+  ],
+  "coverage": {
+    "rules_total": 12,
+    "rules_fired": 12,
+    "rule_coverage": 1.0,
+    "uncovered_rule_ids": [],
+    "event_types_total": 12,
+    "event_types_observed": 12,
+    "event_type_coverage": 1.0,
+    "uncovered_event_types": [],
+    "transitions_observed": 4,
+    "unique_transitions": [
+      [
+        "UNANIMOUS_ALLOW",
+        "CONTRADICTION"
+      ],
+      [
+        "UNANIMOUS_ALLOW",
+        "OVERRIDE_ALLOW"
+      ],
+      [
+        "UNANIMOUS_ALLOW",
+        "OVERRIDE_DENY"
+      ],
+      [
+        "UNANIMOUS_ALLOW",
+        "UNANIMOUS_ALLOW"
+      ]
+    ]
+  },
+  "simple_refund_boundaries": [
+    {
+      "day": 0,
+      "outcome": "ALLOW",
+      "resolution": "UNANIMOUS_ALLOW",
+      "rules_fired": [
+        "simple_refund"
+      ],
+      "findings": []
+    },
+    {
+      "day": 30,
+      "outcome": "ALLOW",
+      "resolution": "UNANIMOUS_ALLOW",
+      "rules_fired": [
+        "simple_refund"
+      ],
+      "findings": []
+    },
+    {
+      "day": 31,
+      "outcome": "DENY",
+      "resolution": "DEFAULT_DENY",
+      "rules_fired": [],
+      "findings": [
+        "POLICY_GAP"
+      ]
+    }
+  ],
+  "benchmark_cli_wall_seconds": 1.528774,
+  "benchmark_plus_coverage_shrink_replay_wall_seconds": 1.571199,
+  "limitations": [
+    "Label accuracy and finding-free journeys are different metrics.",
+    "Coverage counts fired rules, including subsequently suppressed rules.",
+    "Finding identity is type plus sorted rule IDs; it can conflate invariant failures.",
+    "Counterexamples preserve that signature; global shortestness is not established.",
+    "The CLI suite has 50 labeled cases; supplemental replay/shrink runs are not new labeled cases.",
+    "No live baseline or extraction-quality benchmark was run."
+  ]
+}

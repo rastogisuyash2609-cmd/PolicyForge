@@ -1,0 +1,11 @@
+{
+  "build_public_files_scanned": 117,
+  "total_files_scanned": 285,
+  "configured_credential_matches": 0,
+  "frontend_secret_env_reads": 0,
+  "root_env_ignored_untracked": true,
+  "root_env_live_flag_false": true,
+  "backend_health_http": 200,
+  "production_frontend_http": 200,
+  "additional_provider_requests": 0
+}

@@ -1,0 +1,521 @@
+{
+  "benchmark_version": "1.0",
+  "run_timestamp": "2026-10-29T04:15:38Z",
+  "engine": {
+    "metrics": {
+      "runner_name": "PolicyForge Engine",
+      "total_scenarios": 50,
+      "scenarios_with_expectation": 49,
+      "outcome_correct": 49,
+      "outcome_accuracy": 1.0,
+      "outcome_precision_allow": 1.0,
+      "outcome_recall_allow": 1.0,
+      "outcome_f1_allow": 1.0,
+      "outcome_precision_deny": 1.0,
+      "outcome_recall_deny": 1.0,
+      "outcome_f1_deny": 1.0,
+      "finding_metrics": [
+        {
+          "finding_type": "CONTRADICTION",
+          "true_positives": 1,
+          "false_positives": 0,
+          "false_negatives": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        {
+          "finding_type": "POLICY_GAP",
+          "true_positives": 1,
+          "false_positives": 0,
+          "false_negatives": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        {
+          "finding_type": "AMBIGUITY",
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        {
+          "finding_type": "INVARIANT_VIOLATION",
+          "true_positives": 1,
+          "false_positives": 0,
+          "false_negatives": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      ],
+      "consistency_rate": 1.0,
+      "avg_latency_ms": 0.2,
+      "p95_latency_ms": 0.5,
+      "total_tokens": 0,
+      "avg_tokens_per_scenario": 0.0
+    },
+    "results": [
+      {
+        "scenario_id": "ls_001",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.305,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_002",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.339,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_003",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.121,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_004",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.143,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_005",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.137,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_006",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.237,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_007",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.228,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_008",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.151,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_009",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [
+          "CONTRADICTION"
+        ],
+        "latency_ms": 0.359,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_010",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.179,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_011",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.166,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_012",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.152,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_013",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.117,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_014",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.201,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_015",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.15,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_016",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.131,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_017",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.149,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_018",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.136,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_019",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.109,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_020",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.09,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_021",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.133,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_022",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.203,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_023",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.136,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_024",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [
+          "POLICY_GAP"
+        ],
+        "latency_ms": 0.093,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_025",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.173,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_026",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.109,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_027",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.109,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_028",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.094,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_029",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.632,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_030",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.276,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_031",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.3,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_032",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.356,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_033",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.406,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_034",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.549,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_035",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.295,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_036",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.361,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_037",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.297,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_038",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.569,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_039",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [
+          "INVARIANT_VIOLATION"
+        ],
+        "latency_ms": 0.272,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_040",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.135,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_041",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.091,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_042",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.133,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_043",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.104,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_044",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.119,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_045",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.104,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_046",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.103,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_047",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.121,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_048",
+        "expected_outcome": "ALLOW",
+        "engine_outcome": "ALLOW",
+        "finding_types": [],
+        "latency_ms": 0.21,
+        "correct": true,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_049",
+        "expected_outcome": null,
+        "engine_outcome": null,
+        "finding_types": [],
+        "latency_ms": 0.062,
+        "correct": null,
+        "is_consistent": true
+      },
+      {
+        "scenario_id": "ls_050",
+        "expected_outcome": "DENY",
+        "engine_outcome": "DENY",
+        "finding_types": [],
+        "latency_ms": 0.111,
+        "correct": true,
+        "is_consistent": true
+      }
+    ]
+  },
+  "baseline": null
+}
