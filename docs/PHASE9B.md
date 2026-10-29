@@ -1,5 +1,11 @@
 # Phase 9B, Step A: offline preparation for one frontend inference
 
+**Completion update:** the owner has now performed one successful real frontend
+compilation, and the backend has been returned to live-disabled mode. Exact usage
+and billing for that frontend request are unavailable/pending. See
+[the final Step B result](PHASE9B_LIVE_RESULT.md). The preparation record below
+describes the earlier Step A state, not the current execution status.
+
 Prepared on 2026-10-29 from fc07278. **Step A only: zero additional live Nebius
 requests or paid inference.** No enabling of live mode, credential generation,
 credential edits, frontend Compile action against Nebius, benchmark, push, merge,
